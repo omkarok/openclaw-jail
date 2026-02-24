@@ -1,0 +1,10 @@
+# Runtime state — never commit
+openclaw-home/
+workspace/
+logs/
+
+# Backup files created by openclaw config set
+*.bak
+
+# Local env overrides
+.env
