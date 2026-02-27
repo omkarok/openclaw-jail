@@ -1,5 +1,5 @@
 # OpenClaw Jail — RUNBOOK
-**Version:** 1.7
+**Version:** 1.8
 **Last updated:** 2026-02-27
 **OpenClaw version:** 2026.2.23
 **Security audit:** 0 critical · 0 warn
@@ -266,6 +266,38 @@ docker compose down
 docker compose build --no-cache
 docker compose up -d
 ```
+
+After upgrading, always run the full post-upgrade checklist:
+
+```bash
+# 1. Confirm new version
+docker compose exec -T openclaw openclaw --version
+
+# 2. Security audit — must be 0 critical · 0 warn
+docker compose exec -T openclaw openclaw security audit
+
+# 3. Fix credentials dir perms if flagged (mode should be 700)
+docker compose exec -T openclaw bash -c "chmod 700 /home/node/.openclaw/.openclaw/credentials"
+
+# 4. Check groupAllowFrom — new versions may reset it to wildcard "*"
+docker compose exec -T openclaw openclaw config set \
+  channels.whatsapp.groupAllowFrom '["+<your-whatsapp-number>"]'
+
+# 5. Restart to apply any config fixes
+docker compose restart openclaw
+
+# 6. Re-run audit to confirm clean
+docker compose exec -T openclaw openclaw security audit
+```
+
+**Known post-upgrade issues (seen on upgrade to v2026.2.26):**
+
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| `groupAllowFrom` reset to `["*"]` | Audit warns `multi_user_heuristic` | Set back to `["+<your-whatsapp-number>"]` |
+| Credentials dir perms 755 | Audit warns `fs.credentials_dir.perms_readable` | `chmod 700` on credentials dir |
+
+**Note:** `configWrites: true` is intentional — allows the agent to self-protect (e.g. lock down groups during a red-team). Check `groupAllowFrom` after any autonomous config change.
 
 ---
 
