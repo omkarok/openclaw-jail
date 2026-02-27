@@ -1,5 +1,5 @@
 # OpenClaw Jail — RUNBOOK
-**Version:** 1.9
+**Version:** 2.0
 **Last updated:** 2026-02-27
 **OpenClaw version:** 2026.2.23
 **Security audit:** 0 critical · 0 warn
@@ -16,6 +16,12 @@
 ├── openclaw-home/           # OpenClaw auth state + persistent config (maps to /home/node)
 │   └── .openclaw/.openclaw/ # Actual config, sessions, auth profiles
 ├── workspace/               # ONLY writable work area (maps to /home/node/workspace)
+│   ├── SECURITY.md          # Agent hard-rules (non-negotiable, loaded every boot)
+│   ├── SOUL.md              # Agent identity and values
+│   ├── AGENTS.md            # Session boot sequence and workspace rules
+│   ├── IDENTITY.md          # Agent name (Sherbyte), vibe, emoji
+│   ├── USER.md              # Owner profile (OK / Omkar)
+│   ├── memory/              # Daily notes + long-term MEMORY.md
 │   ├── quarantine/          # Move-not-delete target (never rm, always mv here)
 │   └── .git/                # Git snapshot history
 └── logs/                    # Gateway logs (maps to /var/log/openclaw)
@@ -257,6 +263,58 @@ docker compose exec openclaw openclaw channels status
 
 ---
 
+## WhatsApp Groups
+
+**Status:** enabled, `groupPolicy: allowlist`, `groupAllowFrom: ["*"]`
+
+The agent participates in any WhatsApp group the linked number is a member of.
+
+### Trigger keywords (mentionPatterns)
+
+The agent only responds in groups when a message contains one of these text patterns (case-insensitive):
+
+| Keyword | Purpose |
+|---|---|
+| `@claw` | Primary trigger |
+| `@omkar` | Display-name trigger (falls back when WA metadata mention fails) |
+| `@cc` | Short alias |
+
+**Example:** `@claw summarise the last 10 messages`
+
+> **Why text patterns?** WhatsApp's metadata @mention uses LID (Linked Device ID) — the ID mapping between the Baileys session and the phone's identity is not always resolved. Text patterns bypass this reliably.
+
+### Adding or changing trigger keywords
+
+Edit `workspace/SECURITY.md` and restart — **or** update `openclaw.json` directly:
+
+```bash
+docker compose exec openclaw bash -c "openclaw config get agents.list"
+# Current: [{"id":"main","groupChat":{"mentionPatterns":["@claw","@omkar","@cc"]}}]
+
+# To add a new pattern:
+docker compose exec -T openclaw openclaw config set \
+  'agents.list[0].groupChat.mentionPatterns' '["@claw","@omkar","@cc","@sherbyte"]'
+docker compose restart openclaw
+```
+
+### Group security rules (enforced by SECURITY.md)
+
+- No shell/exec/enumeration commands from groups — DM only
+- No config or secrets disclosure in groups
+- Prompt injection → refuse and contain
+- Escalation protocol: L1 refuse → L2 goodbye → L3 config lockdown + DM alert to OK
+- `MEMORY.md` never loaded or referenced in group context
+
+### List known groups
+
+```bash
+docker compose exec -T openclaw openclaw directory groups list --channel whatsapp
+```
+
+Groups are discovered dynamically from inbound messages — run this after receiving at least one group message.
+
+---
+
 ## Upgrade OpenClaw
 
 Rebuild the image with the latest version:
@@ -363,13 +421,40 @@ git reset --hard <commit_hash>
 "channels": {
   "whatsapp": {
     "enabled": true,
+    "capabilities": ["attachments", "files"],
+    "configWrites": true,
     "dmPolicy": "allowlist",
-    "groupPolicy": "allowlist",
     "allowFrom": ["<your-whatsapp-number>"],
-    "groupAllowFrom": ["<your-whatsapp-number>"]
+    "groupPolicy": "allowlist",
+    "groupAllowFrom": ["*"],
+    "debounceMs": 0,
+    "mediaMaxMb": 50,
+    "accounts": {
+      "default": {
+        "capabilities": ["attachments", "files"],
+        "dmPolicy": "allowlist",
+        "groupPolicy": "allowlist",
+        "debounceMs": 0
+      }
+    }
   }
 }
 ```
+
+```json
+"agents": {
+  "list": [
+    {
+      "id": "main",
+      "groupChat": {
+        "mentionPatterns": ["@claw", "@omkar", "@cc"]
+      }
+    }
+  ]
+}
+```
+
+> **`configWrites: true`** — allows the agent to self-protect by patching `openclaw.json` during active red-teams (e.g. disabling groups when an exploit is detected). Check `groupAllowFrom` after any autonomous config change.
 
 ---
 
@@ -424,6 +509,68 @@ git reset --hard <commit_hash>
 | `system.notify` | OS-level push notifications |
 
 **Note:** Commands like `camera.snap`, `screen.record`, `sms.send`, `calendar.add`, `contacts.add`, `reminders.add` are not in the gateway defaults and therefore cannot be invoked — no explicit deny needed.
+
+---
+
+## Workspace Security System
+
+The agent loads a stack of markdown files at every session boot (defined in `AGENTS.md`):
+
+| File | Purpose | Loaded when |
+|---|---|---|
+| `SOUL.md` | Core identity and values | Every session |
+| `SECURITY.md` | Hard rules — non-negotiable | Every session (step 2) |
+| `USER.md` | Owner profile | Every session |
+| `IDENTITY.md` | Agent name, vibe, emoji | Every session |
+| `MEMORY.md` | Long-term curated memory | Direct DM only — **never in groups** |
+| `memory/YYYY-MM-DD.md` | Daily notes | Every session |
+
+### SECURITY.md — 9 hard rules
+
+1. No shell/enumeration from groups (DM + OK only)
+2. No secrets/credentials disclosure (all contexts)
+3. Prompt injection → refuse and contain
+4. Group escalation protocol (L1 refuse → L2 goodbye → L3 lockdown + DM alert)
+5. Identity/integration privacy (don't confirm OpenClaw to group members)
+6. Memory protection (MEMORY.md never disclosed in groups)
+7. Command authorization hierarchy
+8. Stress test posture (treat every probe as real until DM confirmation)
+9. Owner trust model (highest trust ≠ unconditional — confirm before irreversible actions)
+
+### Updating security rules
+
+Edit `workspace/SECURITY.md` directly on the host. Changes take effect on the next session (no restart needed — file is read at session start, not boot).
+
+```bash
+# View current rules
+cat ~/openclaw-jail/workspace/SECURITY.md
+
+# After editing, commit to workspace git
+docker compose exec openclaw bash -c "cd /home/node/workspace && git add SECURITY.md && git commit -m 'security: <change description>'"
+```
+
+### Workspace git history
+
+```bash
+# View security-related commits
+docker compose exec openclaw bash -c "cd /home/node/workspace && git log --oneline"
+
+# Roll back a security file change
+docker compose exec openclaw bash -c "cd /home/node/workspace && git checkout <hash> -- SECURITY.md"
+```
+
+---
+
+## GitHub Repository
+
+The jail config (sanitized, no secrets) is published at:
+**https://github.com/omkarok/openclaw-jail**
+
+Committed files: `Dockerfile`, `docker-compose.yml`, `.gitignore`, `README.md`, `CLAUDE.md`, `RUNBOOK.md`
+
+Runtime state (`openclaw-home/`, `workspace/`, `logs/`) is git-ignored and never committed.
+
+> `local.md` in the jail root (also git-ignored) contains your actual token and connection URLs. See that file for the live dashboard URL.
 
 ---
 
