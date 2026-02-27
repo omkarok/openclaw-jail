@@ -8,3 +8,6 @@ logs/
 
 # Local env overrides
 .env
+
+# Local secrets — never commit
+local.md

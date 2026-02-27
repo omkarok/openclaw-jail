@@ -2,6 +2,7 @@ services:
   openclaw:
     build: .
     container_name: openclaw
+    restart: unless-stopped
 
     # Run as non-root (node user, uid 1000)
     user: "1000:1000"

@@ -1,6 +1,6 @@
 # OpenClaw Jail — RUNBOOK
-**Version:** 1.3
-**Last updated:** 2026-02-24
+**Version:** 1.7
+**Last updated:** 2026-02-27
 **OpenClaw version:** 2026.2.23
 **Security audit:** 0 critical · 0 warn
 
@@ -23,6 +23,30 @@
 
 ---
 
+## Always-On Configuration
+
+The container is configured to stay running through system events:
+
+| Event | Behaviour |
+|-------|-----------|
+| Screen lock | Keeps running — no effect |
+| Laptop lid close | Keeps running — Windows lid action set to **Do nothing** |
+| Sleep / hibernate | Docker pauses — avoid; keep machine awake |
+| Container crash | Auto-restarts — `restart: unless-stopped` in compose |
+| Docker Desktop restart / reboot | Auto-restarts — requires Docker Desktop set to start on login |
+
+**Docker Desktop on-login setting:** Docker Desktop → Settings → General → "Start Docker Desktop when you log in" ✓
+
+**Windows lid close setting** (must be set as Administrator if re-applying):
+```powershell
+powercfg /setacvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_BUTTONS LIDACTION 0
+powercfg /setactive SCHEME_CURRENT
+```
+Or via GUI: `Win+R` → `powercfg.cpl` → "Choose what closing the lid does" → **Do nothing** (both columns).
+
+---
+
 ## Start / Stop / Status
 
 ```bash
@@ -30,7 +54,7 @@
 cd ~/openclaw-jail
 docker compose up -d
 
-# Stop
+# Stop (will NOT auto-restart until manually started again)
 cd ~/openclaw-jail
 docker compose down
 
@@ -70,13 +94,43 @@ Gateway token: `<your-gateway-token>`
 
 > **Browser note:** Always include `#token=...` in the URL — without it the gateway rejects the connection with `pairing required`.
 
+### Dashboard shows "pairing required" / "disconnected from gateway"
+
+The dashboard uses a **device pairing flow**. Opening the URL with `#token=...` sends a pairing request from the browser — the gateway must approve it. This is required on first use and after clearing browser data or using a new browser.
+
+**Fix:**
+```bash
+# 1. Open the dashboard URL in your browser (triggers a pairing request)
+http://127.0.0.1:18789/#token=<your-gateway-token>
+
+# 2. List pending device requests
+docker compose exec -T openclaw openclaw devices list
+
+# 3. Approve the pending request
+docker compose exec -T openclaw openclaw devices approve <request-id>
+
+# 4. Reload the dashboard — it connects automatically
+```
+
+**Expected after approval:** gateway logs show `clients=1` and responses to `agent.identity.get`, `chat.history`, etc.
+
+**Note:** If many failed attempts piled up before approval, the rate limiter may have triggered. Restart the container to reset it, then repeat the steps above:
+```bash
+docker compose restart openclaw
+```
+
 ---
 
 ## OpenClaw Onboarding (first time only)
 
-Run interactively — requires a real TTY (open in Windows Terminal or PowerShell):
+Run interactively — requires a real TTY (open Windows Terminal, PowerShell, or cmd):
 
+```cmd
+:: cmd.exe
+docker compose -f %USERPROFILE%\openclaw-jail\docker-compose.yml exec openclaw bash
+```
 ```powershell
+# PowerShell
 docker compose -f $env:USERPROFILE\openclaw-jail\docker-compose.yml exec openclaw bash
 ```
 
@@ -137,11 +191,44 @@ docker compose exec openclaw openclaw pairing list whatsapp
 # Never run: openclaw pairing approve whatsapp <CODE> for unknown numbers.
 ```
 
+### DMs stop working but session shows "active" in Linked Devices
+
+**Symptoms:**
+- `openclaw channels status` shows `connected` but `out:Xh ago` (many hours with no outbound)
+- Group messages and LID sync flood appear in logs
+- DMs from your own number produce no log entries at all — no inbound, no blocked, nothing
+- Container restarts do not fix it
+
+**Cause:** E2E crypto state between phone and Baileys linked device goes out of sync after a long idle period or reboot. Re-link fixes it — no session data or history is lost.
+
+**Early tell:** `out:Xh ago` in `channels status` where X is unexpectedly large (e.g. `out:35h ago` while messages were recently sent).
+
+Open a terminal (cmd or PowerShell) and shell into the container:
+
+```cmd
+:: cmd.exe
+docker compose -f %USERPROFILE%\openclaw-jail\docker-compose.yml exec openclaw bash
+```
+```powershell
+# PowerShell
+docker compose -f $env:USERPROFILE\openclaw-jail\docker-compose.yml exec openclaw bash
+```
+Then inside the container:
+```bash
+openclaw channels logout --channel whatsapp && openclaw channels login --channel whatsapp
+```
+Scan the QR in WhatsApp → Settings → Linked Devices → Link a Device.
+
 ### Re-link WhatsApp (if session expires)
 
-Requires a real TTY — open Windows Terminal or PowerShell:
+Requires a real TTY — open Windows Terminal, PowerShell, or cmd:
 
+```cmd
+:: cmd.exe
+docker compose -f %USERPROFILE%\openclaw-jail\docker-compose.yml exec openclaw bash
+```
 ```powershell
+# PowerShell
 docker compose -f $env:USERPROFILE\openclaw-jail\docker-compose.yml exec openclaw bash
 ```
 
@@ -153,6 +240,13 @@ openclaw channels login --channel whatsapp --verbose
 
 Scan the QR code in WhatsApp → Settings → Linked Devices → Link a Device.
 After re-linking, just text the bot — no pairing approval needed (`dm:allowlist`).
+
+### WhatsApp 428 disconnects
+
+OpenClaw auto-recovers from 428s in 2–5 seconds. To prevent them:
+- **Do not open `web.whatsapp.com`** while OpenClaw is running — it competes for the same session slot
+- **Keep linked device count low** — check on phone: Settings → Linked Devices (limit ~4)
+- **Don't let the machine sleep** — suspend drops the WA Web connection and causes a 428 on wake
 
 ### Check channel health
 
@@ -349,6 +443,39 @@ docker compose exec openclaw openclaw security audit
 cd ~/openclaw-jail
 docker compose down
 ```
+
+---
+
+## Agent Trust Model
+
+### Owner trust is high — but not unconditional
+
+OK (the owner) is the highest-trust principal. However, the agent applies sanity checks regardless of who is asking, because OK can be:
+
+- **Compromised** — phone hijacked or WhatsApp session taken over
+- **Coerced** — someone forcing OK to send an instruction
+- **Mistaken** — requesting something harmful without realising the full scope
+- **Testing** — deliberately sending something dangerous to verify the agent catches it
+
+### How instructions are handled
+
+| Instruction type | Behaviour |
+|---|---|
+| Normal tasks, config changes | Follow immediately |
+| Disengage / stop responding | Follow immediately |
+| Irreversible or destructive actions | Confirm before acting — even from OK |
+| Contradicts a standing hard rule | Flag the contradiction, ask to confirm |
+| Arrives in unusual context (group mid-attack, odd timing) | Act + flag |
+
+### Group context: act + flag, never refuse
+
+When OK sends an instruction in a group chat (including during an active red-team):
+- OK may be doing real-time moderation — the public instruction is intentionally visible to the group as a signal to attackers, not just to the agent
+- Agent must **comply** — refusing because the channel is noisy is wrong
+- Agent must **flag** — acknowledge visibly so OK knows it was received and acted on
+- Do not silently ignore or demand the instruction be re-sent via DM
+
+**Rule: paranoia = flag + act, not flag + block.**
 
 ---
 
