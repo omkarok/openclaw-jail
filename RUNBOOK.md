@@ -1,5 +1,5 @@
 # OpenClaw Jail — RUNBOOK
-**Version:** 1.8
+**Version:** 1.9
 **Last updated:** 2026-02-27
 **OpenClaw version:** 2026.2.23
 **Security audit:** 0 critical · 0 warn
@@ -288,6 +288,23 @@ docker compose restart openclaw
 
 # 6. Re-run audit to confirm clean
 docker compose exec -T openclaw openclaw security audit
+
+# 7. Re-link WhatsApp — Baileys is updated with every OpenClaw release;
+#    the new version invalidates the old saved session (401 Unauthorized).
+#    Requires a real TTY — open Windows Terminal or PowerShell:
+```cmd
+:: cmd.exe
+docker compose -f %USERPROFILE%\openclaw-jail\docker-compose.yml exec openclaw bash
+```
+```powershell
+# PowerShell
+docker compose -f $env:USERPROFILE\openclaw-jail\docker-compose.yml exec openclaw bash
+```
+Then inside the container:
+```bash
+openclaw channels logout --channel whatsapp && openclaw channels login --channel whatsapp
+```
+Scan the QR in WhatsApp → Settings → Linked Devices → Link a Device.
 ```
 
 **Known post-upgrade issues (seen on upgrade to v2026.2.26):**
@@ -296,6 +313,7 @@ docker compose exec -T openclaw openclaw security audit
 |-------|---------|-----|
 | `groupAllowFrom` reset to `["*"]` | Audit warns `multi_user_heuristic` | Set back to `["+<your-whatsapp-number>"]` |
 | Credentials dir perms 755 | Audit warns `fs.credentials_dir.perms_readable` | `chmod 700` on credentials dir |
+| WhatsApp 401 after upgrade | Channel shows `disconnected`, DMs stop | Re-link via `channels logout && channels login` + QR scan |
 
 **Note:** `configWrites: true` is intentional — allows the agent to self-protect (e.g. lock down groups during a red-team). Check `groupAllowFrom` after any autonomous config change.
 
