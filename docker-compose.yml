@@ -41,9 +41,10 @@ services:
     # openclaw binary lives in /usr/local/bin (image layer, read-only is fine)
     read_only: true
 
-    # Ephemeral temp space only
+    # Ephemeral temp space
     tmpfs:
       - /tmp:rw,noexec,nosuid,nodev,size=512m
+      - /run:rw,nosuid,nodev,size=64m   # needed by some openclaw runtime paths
 
     # Prevent runaway processes
     pids_limit: 256

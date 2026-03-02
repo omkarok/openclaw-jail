@@ -831,6 +831,58 @@ These settings are managed by the Docker jail architecture and must not be chang
 
 ---
 
+## Network Egress Restrictions
+
+Container outbound traffic is restricted at the WSL2 host level via `iptables` rules on the Docker `DOCKER-USER` chain. This is kernel-level enforcement — the container cannot bypass it regardless of what the agent does.
+
+**Allowed outbound:**
+
+| Port | Protocol | Purpose |
+|------|----------|---------|
+| 53 | UDP + TCP | DNS resolution |
+| 80 | TCP | HTTP (browser automation, redirects) |
+| 443 | TCP | HTTPS (OpenAI API, WhatsApp Web, browser automation) |
+| 123 | UDP | NTP (time sync) |
+| intra-subnet | any | Docker internal traffic (container ↔ gateway) |
+
+**Blocked outbound:**
+- `169.254.169.254` and `169.254.170.2` — cloud metadata endpoints (IMDS/ECS)
+- All ports other than the above — raw TCP C2 channels, SMTP exfiltration, non-standard protocols
+
+### Managing the egress rules
+
+Rules are applied by `egress-rules.sh` and persisted by the `openclaw-egress` systemd service in WSL2 Ubuntu.
+
+```bash
+# Re-apply rules manually (e.g. after Docker restart flushes DOCKER-USER)
+sudo bash ~/openclaw-jail/egress-rules.sh
+
+# Check current rules
+sudo iptables -S DOCKER-USER
+
+# Service status
+systemctl status openclaw-egress.service
+
+# Restart service (re-applies rules)
+sudo systemctl restart openclaw-egress.service
+```
+
+**Note:** Docker restarts (`docker compose down && up`) recreate the network. If the subnet changes, re-run the script — it detects the subnet automatically. The systemd service runs at WSL2 boot and re-applies rules automatically.
+
+### Smoke test
+
+```bash
+# Metadata endpoint should be blocked (timeout/no response)
+docker exec openclaw bash -c 'curl -s --max-time 3 http://169.254.169.254/ || echo BLOCKED'
+# Expected: BLOCKED
+
+# HTTPS to known host should work
+docker exec openclaw bash -c 'curl -s --max-time 5 -o /dev/null -w "%{http_code}" https://api.openai.com'
+# Expected: 421 (or any HTTP response code — means TCP/TLS reached the server)
+```
+
+---
+
 ## Security Constraints (Non-negotiable)
 
 - Container runs as **uid 1000 (non-root)**
@@ -838,6 +890,7 @@ These settings are managed by the Docker jail architecture and must not be chang
 - Gateway binds to **`lan`** inside container; Docker exposes on **`127.0.0.1` only**
 - Control UI restricted to explicit origins: `http://127.0.0.1:18789`, `http://localhost:18789`
 - Auth rate limiting: 5 attempts / 60s window, 30 min lockout
+- Network egress: ports 80/443/53/123 only; metadata endpoints and all other ports blocked
 - All capabilities dropped (`cap_drop: ALL`)
 - No new privileges (`no-new-privileges:true`)
 - Only `workspace/` is writable; `openclaw-home/` persists auth state
