@@ -48,9 +48,19 @@ services:
     # Prevent runaway processes
     pids_limit: 256
 
-    # Resource ceiling (tune later)
+    # Resource ceiling
     mem_limit: 6g
+    mem_reservation: 4g   # Soft limit — triggers memory reclaim before hard kill
     cpus: "4.0"
+
+    # Shared memory for Chromium/Playwright (default 64m is too small, causes renderer crashes)
+    shm_size: 512m
+
+    # File descriptor limits (Playwright opens many fds per tab)
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
 
     command: >
       bash -lc "openclaw gateway --port 18789 --verbose 2>&1 | tee /var/log/openclaw/gateway.log"
