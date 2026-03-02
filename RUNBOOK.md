@@ -1,7 +1,7 @@
 # OpenClaw Jail — RUNBOOK
 **Version:** 2.0
-**Last updated:** 2026-02-27
-**OpenClaw version:** 2026.2.23
+**Last updated:** 2026-03-02
+**OpenClaw version:** 2026.2.26
 **Security audit:** 0 critical · 0 warn
 
 ---
@@ -673,6 +673,20 @@ When OK sends an instruction in a group chat (including during an active red-tea
 - Do not silently ignore or demand the instruction be re-sent via DM
 
 **Rule: paranoia = flag + act, not flag + block.**
+
+---
+
+## Do Not Change — Jail-Managed Config
+
+These settings are managed by the Docker jail architecture and must not be changed, even if a security audit flags them:
+
+| Config | Value | Reason |
+|---|---|---|
+| `agents.defaults.sandbox.mode` | `off` | OpenClaw runs inside a hardened Docker jail — the container IS the sandbox. `sandbox.mode=all` tries to spawn Docker-in-Docker, which doesn't exist inside the container and breaks all agent runs with `spawn docker ENOENT`. |
+| `commands.restart` | `false` | Restart spawns `docker` from inside the container — not available. |
+| `gateway.bind` | `lan` | Required for Docker port forwarding. `loopback` makes the gateway unreachable from the host. |
+
+**Security audit warning about `sandbox=off` is a false positive** for this setup — the audit heuristic assumes a bare-metal install. The Docker jail provides stronger isolation than OpenClaw's own sandbox flag.
 
 ---
 
