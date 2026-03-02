@@ -22,6 +22,12 @@ services:
       # Logs
       - ./logs:/var/log/openclaw:rw
 
+      # Named volume for sessions directory — Docker-managed (WSL2 ext4), so new files
+      # are created with uid=1000 (node). Windows bind mounts always produce root:root
+      # for new files, which breaks openclaw's chmod on sessions.json.
+      # This mount overrides the Windows bind mount for this specific subdirectory.
+      - openclaw-sessions:/home/node/.openclaw/.openclaw/agents/main/sessions:rw
+
     ports:
       # Localhost only — OpenClaw gateway (WebSocket + WebChat UI)
       - "127.0.0.1:18789:18789"
@@ -36,6 +42,10 @@ services:
 
     security_opt:
       - no-new-privileges:true
+      # NOTE: Docker's default seccomp profile is applied automatically (blocks ~300 syscalls).
+      # Do NOT add "seccomp:unconfined" here — that would disable it.
+      # A custom restrictive profile (e.g. blocking clone3, ptrace, kexec_load) would
+      # be the next hardening step; deferred — Docker default is sufficient for this threat model.
 
     # Container root filesystem is read-only
     # openclaw binary lives in /usr/local/bin (image layer, read-only is fine)
@@ -64,4 +74,23 @@ services:
         hard: 65536
 
     command: >
-      bash -lc "openclaw gateway --port 18789 --verbose 2>&1 | tee /var/log/openclaw/gateway.log"
+      bash -lc "
+        echo '[preflight] Verifying egress policy (metadata endpoint check)...';
+        if curl --max-time 3 --silent http://169.254.169.254/ > /dev/null 2>&1; then
+          echo '[preflight] FATAL: Cloud metadata endpoint 169.254.169.254 is reachable.';
+          echo '[preflight] FATAL: Egress rules are NOT active. Refusing to start gateway.';
+          echo '[preflight] FATAL: Run: sudo bash ~/openclaw-jail/egress-rules.sh in WSL2, then restart.';
+          exit 1;
+        else
+          echo '[preflight] OK: Metadata endpoint blocked — egress policy confirmed active.';
+        fi;
+        openclaw gateway --port 18789 --verbose 2>&1 | tee /var/log/openclaw/gateway.log
+      "
+
+volumes:
+  # Docker-managed volume for OpenClaw sessions — lives on WSL2 ext4 so files
+  # are created with the correct uid=1000 (node). Avoids the Windows bind-mount
+  # bug where new files always appear as root:root inside the container.
+  openclaw-sessions:
+    external: true
+    name: openclaw-jail_openclaw-sessions
