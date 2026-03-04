@@ -7,7 +7,7 @@ FROM node:22.22.0-bookworm
 
 # Pin package versions — never use @latest in a security-sensitive build.
 # To upgrade: test the new version, then bump both pins here.
-ARG OPENCLAW_VERSION=2026.3.1
+ARG OPENCLAW_VERSION=2026.3.2
 ARG PLAYWRIGHT_VERSION=1.58.2
 
 # Install openclaw globally during build (required for read-only root at runtime)
