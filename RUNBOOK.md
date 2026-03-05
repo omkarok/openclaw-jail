@@ -37,7 +37,7 @@ The container is configured to stay running through system events:
 |-------|-----------|
 | Screen lock | Keeps running — no effect |
 | Laptop lid close | Keeps running — Windows lid action set to **Do nothing** |
-| Sleep / hibernate | Docker pauses — avoid; keep machine awake |
+| Sleep / hibernate | Docker pauses — avoid; keep machine awake (see Battery Sleep below) |
 | Container crash | Auto-restarts — `restart: unless-stopped` in compose |
 | Docker Desktop restart / reboot | Auto-restarts — requires Docker Desktop set to start on login |
 
@@ -246,6 +246,27 @@ openclaw channels login --channel whatsapp --verbose
 
 Scan the QR code in WhatsApp → Settings → Linked Devices → Link a Device.
 After re-linking, just text the bot — no pairing approval needed (`dm:allowlist`).
+
+### Battery sleep / laptop suspend (confirmed incident 2026-03-04)
+
+**What happens:** Windows Event ID 42 ("Sleep Reason: Battery") triggers Docker Desktop to suspend all containers. On resume (Event ID 107), Docker restarts the container but:
+- WhatsApp auto-reconnects within ~2–5 seconds (no manual action needed)
+- Agent routing binding survives (persisted in `openclaw.json → "bindings"` array)
+- Any in-flight message deliveries from the sleep window are lost
+
+**To diagnose a past disconnect:**
+```powershell
+Get-WinEvent -FilterHashtable @{LogName='System'; Id=@(41,1074,6006,6008,42,107)} -MaxEvents 10 | Select-Object TimeCreated, Id, Message | Format-List
+```
+Event ID 42 = sleep, ID 107 = resume, ID 41 = unexpected power-off.
+
+**Prevention — disable battery sleep:**
+```powershell
+# Run as Administrator — prevents sleep on battery
+powercfg /setdcvalueindex SCHEME_CURRENT SUB_SLEEP STANDBYIDLE 0
+powercfg /setactive SCHEME_CURRENT
+```
+Or: `Win+R` → `powercfg.cpl` → Change plan settings → "Put the computer to sleep" → **Never** (on battery column).
 
 ### WhatsApp 428 disconnects
 
