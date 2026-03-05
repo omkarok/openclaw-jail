@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>OpenClaw — System Explainer</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0a0d12;
+    --surface:  #111620;
+    --border:   #1e2a3a;
+    --accent:   #00c2ff;
+    --accent2:  #7c3aed;
+    --accent3:  #10b981;
+    --accent4:  #f59e0b;
+    --red:      #ef4444;
+    --text:     #e2e8f0;
+    --muted:    #64748b;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Inter', sans-serif;
+  }
+
+  html, body { width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); }
+
+  .slide {
+    width: 1920px; height: 1080px;
+    display: none;
+    position: absolute; top: 0; left: 0;
+    font-family: var(--sans);
+    color: var(--text);
+    overflow: hidden;
+  }
+  .slide.active { display: flex; }
+
+  /* ── Shared layout ── */
+  .slide-inner {
+    width: 100%; height: 100%;
+    display: flex; flex-direction: column;
+    padding: 72px 96px;
+    position: relative;
+  }
+  .tag {
+    font-size: 13px; font-weight: 600; letter-spacing: 2px;
+    text-transform: uppercase; color: var(--accent);
+    margin-bottom: 16px;
+  }
+  h1 { font-size: 80px; font-weight: 900; line-height: 1.05; }
+  h2 { font-size: 52px; font-weight: 800; line-height: 1.1; }
+  h3 { font-size: 28px; font-weight: 700; }
+  p  { font-size: 22px; line-height: 1.65; color: #94a3b8; }
+  .mono { font-family: var(--mono); }
+
+  /* ── Background grid ── */
+  .grid-bg {
+    position: absolute; inset: 0; z-index: 0;
+    background-image:
+      linear-gradient(rgba(0,194,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,194,255,.04) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+  .glow {
+    position: absolute; border-radius: 50%;
+    filter: blur(120px); opacity: .18; z-index: 0;
+  }
+  .content { position: relative; z-index: 1; }
+
+  /* ── Pill / badge ── */
+  .pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    border: 1px solid;
+  }
+  .pill.blue  { background: rgba(0,194,255,.1);  border-color: rgba(0,194,255,.3);  color: var(--accent); }
+  .pill.green { background: rgba(16,185,129,.1); border-color: rgba(16,185,129,.3); color: var(--accent3); }
+  .pill.purple{ background: rgba(124,58,237,.1); border-color: rgba(124,58,237,.3); color: #a78bfa; }
+  .pill.amber { background: rgba(245,158,11,.1); border-color: rgba(245,158,11,.3); color: var(--accent4); }
+  .pill.red   { background: rgba(239,68,68,.1);  border-color: rgba(239,68,68,.3);  color: var(--red); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 28px 32px;
+  }
+
+  /* ── Box / code block ── */
+  .codebox {
+    background: #070a0e; border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px 24px;
+    font-family: var(--mono); font-size: 16px; line-height: 1.7;
+    color: #7dd3fc;
+  }
+  .codebox .cm { color: #475569; }
+  .codebox .kw { color: #a78bfa; }
+  .codebox .st { color: #86efac; }
+  .codebox .nu { color: var(--accent4); }
+
+  /* ── Arrow ── */
+  .arrow { color: var(--muted); font-size: 32px; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+  ══════════════════════════════════════════════════════════════ */
+  #s1 { background: var(--bg); }
+  #s1 .glow1 { width:900px;height:900px; background:var(--accent);  top:-300px; left:-200px; }
+  #s1 .glow2 { width:700px;height:700px; background:var(--accent2); bottom:-250px; right:-150px; }
+  #s1 .slide-inner { justify-content: center; align-items: flex-start; }
+  #s1 h1 { font-size: 96px; background: linear-gradient(135deg,#fff 30%,var(--accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+  #s1 .sub { font-size: 28px; color:#64748b; margin-top: 24px; max-width: 720px; }
+  #s1 .badges { display:flex; gap:12px; margin-top: 48px; }
+  #s1 .version { position:absolute; bottom:72px; right:96px; font-family:var(--mono); font-size:14px; color:var(--muted); }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 2 — ARCHITECTURE
+  ══════════════════════════════════════════════════════════════ */
+  #s2 .slide-inner { flex-direction: row; gap: 80px; align-items: center; }
+  #s2 .left { flex: 0 0 480px; }
+  #s2 .right { flex: 1; }
+  .arch-box {
+    border-radius: 16px; padding: 24px 28px;
+    display: flex; align-items: center; gap: 16px;
+    font-weight: 700; font-size: 22px;
+    border: 2px solid;
+  }
+  .arch-box .icon { font-size: 36px; }
+  .arch-arrow { text-align:center; font-size:28px; color:var(--muted); margin: 8px 0; }
+  .arch-label { font-size:12px; color:var(--muted); font-family:var(--mono); text-align:center; margin-top:4px; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 3 — DOCKER JAIL
+  ══════════════════════════════════════════════════════════════ */
+  #s3 .grid { display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-top:40px; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 4 — SECURITY LAYERS
+  ══════════════════════════════════════════════════════════════ */
+  #s4 .layers { display:flex; flex-direction:column; gap:16px; margin-top:40px; }
+  .layer-row {
+    display:flex; align-items:center; gap:20px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:20px 28px;
+  }
+  .layer-num { font-family:var(--mono); font-size:13px; color:var(--muted); width:24px; }
+  .layer-title { font-weight:700; font-size:20px; width:260px; }
+  .layer-desc { font-size:17px; color:#64748b; flex:1; }
+  .layer-pill { flex-shrink:0; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 5 — NETWORK EGRESS
+  ══════════════════════════════════════════════════════════════ */
+  #s5 .slide-inner { flex-direction: row; gap:80px; align-items:center; }
+  #s5 .left { flex:0 0 560px; }
+  #s5 .right { flex:1; }
+  .egress-row {
+    display:flex; align-items:center; gap:16px;
+    padding: 14px 0; border-bottom:1px solid var(--border);
+    font-size:18px;
+  }
+  .egress-row:last-child { border-bottom:none; }
+  .egress-status { width:80px; font-weight:700; font-family:var(--mono); font-size:14px; }
+  .allow { color: var(--accent3); }
+  .block { color: var(--red); }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 6 — AGENT / GPT-5.3
+  ══════════════════════════════════════════════════════════════ */
+  #s6 .slide-inner { flex-direction:row; gap:80px; align-items:center; }
+  #s6 .left { flex:1; }
+  #s6 .right { flex:0 0 640px; }
+  .trust-row {
+    display:grid; grid-template-columns:160px 1fr 180px;
+    gap:16px; align-items:center;
+    padding:16px 0; border-bottom:1px solid var(--border);
+    font-size:17px;
+  }
+  .trust-row:last-child { border-bottom:none; }
+  .trust-row .src { font-weight:700; }
+  .trust-row .action { color:#64748b; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 7 — BROWSER / PLAYWRIGHT
+  ══════════════════════════════════════════════════════════════ */
+  #s7 .cols { display:grid; grid-template-columns:1fr 1fr; gap:32px; margin-top:40px; }
+  .cmd-list { display:flex; flex-direction:column; gap:10px; }
+  .cmd { font-family:var(--mono); font-size:16px; color:#7dd3fc; padding:10px 16px; background:#070a0e; border-radius:8px; border-left:3px solid var(--accent); }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 8 — MULTI-AGENT
+  ══════════════════════════════════════════════════════════════ */
+  #s8 .flow { display:flex; flex-direction:column; gap:0; margin-top:40px; }
+  .flow-step {
+    display:flex; gap:28px; align-items:flex-start;
+    padding:20px 0;
+  }
+  .flow-left { display:flex; flex-direction:column; align-items:center; gap:0; }
+  .flow-num {
+    width:44px; height:44px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-weight:800; font-size:18px; flex-shrink:0;
+  }
+  .flow-line { width:2px; flex:1; min-height:28px; background:var(--border); margin:4px 0; }
+  .flow-content { padding-top:8px; }
+  .flow-content h3 { font-size:20px; font-weight:700; margin-bottom:4px; }
+  .flow-content p { font-size:17px; color:#64748b; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 9 — HIGHLIGHTS
+  ══════════════════════════════════════════════════════════════ */
+  #s9 .highlights { display:grid; grid-template-columns:1fr 1fr 1fr; gap:24px; margin-top:40px; }
+  .hl-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:28px; }
+  .hl-card .hl-icon { font-size:36px; margin-bottom:16px; }
+  .hl-card h3 { font-size:20px; font-weight:700; margin-bottom:10px; }
+  .hl-card p { font-size:16px; color:#64748b; line-height:1.6; }
+
+  /* ══════════════════════════════════════════════════════════════
+     SLIDE 10 — SCORE / CLOSING
+  ══════════════════════════════════════════════════════════════ */
+  #s10 { background: var(--bg); }
+  #s10 .glow1 { width:800px;height:800px; background:var(--accent3); bottom:-300px; left:-200px; }
+  #s10 .glow2 { width:600px;height:600px; background:var(--accent2); top:-200px; right:-100px; }
+  #s10 .slide-inner { justify-content:center; align-items:center; text-align:center; }
+  #s10 .score-ring {
+    width:220px; height:220px; border-radius:50%;
+    border:6px solid var(--accent3);
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    margin:0 auto 40px;
+    background: rgba(16,185,129,.08);
+  }
+  #s10 .score-num { font-size:80px; font-weight:900; color:var(--accent3); line-height:1; }
+  #s10 .score-label { font-size:18px; color:var(--muted); font-family:var(--mono); }
+  #s10 .closing-pills { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-top:40px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 1 — TITLE
+══════════════════════════════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div class="grid-bg"></div>
+  <div class="glow glow1"></div>
+  <div class="glow glow2"></div>
+  <div class="slide-inner content">
+    <div class="tag">System Architecture Explainer</div>
+    <h1>OpenClaw<br>AI Agent Jail</h1>
+    <p class="sub">A hardened, multi-agent orchestration system bridging Claude Code and GPT‑5.3 Codex — with WhatsApp as the user interface.</p>
+    <div class="badges">
+      <span class="pill blue">v2026.3.1</span>
+      <span class="pill green">9/10 Security</span>
+      <span class="pill purple">Multi-Agent</span>
+      <span class="pill amber">Production</span>
+    </div>
+    <div class="version mono">openclaw-jail · omkarok/openclaw-jail</div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 2 — ARCHITECTURE
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content">
+    <div class="tag">Architecture</div>
+    <h2>Three-Layer Multi-Agent Stack</h2>
+    <div style="display:flex;gap:80px;align-items:center;margin-top:48px;flex:1;">
+      <div style="flex:0 0 420px;display:flex;flex-direction:column;gap:8px;">
+        <div class="arch-box" style="background:rgba(124,58,237,.08);border-color:rgba(124,58,237,.4);">
+          <span class="icon">🧠</span>
+          <div>
+            <div style="color:#a78bfa;">Claude Code</div>
+            <div style="font-size:14px;font-weight:400;color:#64748b;">Ops · Config · Orchestration</div>
+          </div>
+        </div>
+        <div class="arch-arrow">↕</div>
+        <div class="arch-label mono" style="color:#475569;font-size:13px;margin-top:-8px;">ws://127.0.0.1:18789 · token-gated</div>
+        <div class="arch-box" style="background:rgba(0,194,255,.08);border-color:rgba(0,194,255,.4);">
+          <span class="icon">🦞</span>
+          <div>
+            <div style="color:var(--accent);">OpenClaw Gateway</div>
+            <div style="font-size:14px;font-weight:400;color:#64748b;">Runtime · Router · Jail</div>
+          </div>
+        </div>
+        <div class="arch-arrow">↕</div>
+        <div class="arch-label mono" style="color:#475569;font-size:13px;margin-top:-8px;">OpenAI Codex API · OAuth</div>
+        <div class="arch-box" style="background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.4);">
+          <span class="icon">🤖</span>
+          <div>
+            <div style="color:var(--accent3);">GPT-5.3 Codex (Sherbyte)</div>
+            <div style="font-size:14px;font-weight:400;color:#64748b;">Agent Brain · WhatsApp · Browser</div>
+          </div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:20px;">
+        <div class="card">
+          <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:10px;">CLAUDE CODE ROLE</div>
+          <p style="font-size:18px;">Configures the jail, audits security, coordinates complex tasks, delegates to Sherbyte via the gateway when browser automation or WhatsApp delivery is needed.</p>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:10px;">OPENCLAW ROLE</div>
+          <p style="font-size:18px;">The middleware — manages the Docker jail, WebSocket gateway, WhatsApp channel (Baileys), agent lifecycle, hooks, cron, and browser (Playwright).</p>
+        </div>
+        <div class="card">
+          <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:10px;">SHERBYTE (GPT-5.3) ROLE</div>
+          <p style="font-size:18px;">The end-user-facing agent. Responds to WhatsApp DMs, executes tasks, browses the web, manages memory, and enforces hard security rules loaded at every session boot.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 3 — DOCKER JAIL
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content">
+    <div class="tag">Container Isolation</div>
+    <h2>Hardened Docker Jail</h2>
+    <div class="grid">
+      <div class="card">
+        <div style="color:var(--accent);font-size:13px;font-family:var(--mono);margin-bottom:12px;">IDENTITY</div>
+        <h3 style="margin-bottom:10px;">Non-Root, Capability-Dropped</h3>
+        <p style="font-size:17px;">Runs as <span class="mono" style="color:var(--accent4);">uid 1000 (node)</span>. All Linux capabilities dropped. <span class="mono" style="color:var(--accent4);">no-new-privileges</span> enforced. Container cannot escalate to root.</p>
+      </div>
+      <div class="card">
+        <div style="color:var(--accent3);font-size:13px;font-family:var(--mono);margin-bottom:12px;">FILESYSTEM</div>
+        <h3 style="margin-bottom:10px;">Read-Only Root</h3>
+        <p style="font-size:17px;"><span class="mono" style="color:var(--accent3);">read_only: true</span> — root filesystem is immutable. Only <span class="mono">/home/node/workspace</span> and <span class="mono">/tmp</span> are writable. Agent cannot modify the binary layer.</p>
+      </div>
+      <div class="card">
+        <div style="color:var(--accent2);font-size:13px;font-family:var(--mono);margin-bottom:12px;">RESOURCES</div>
+        <h3 style="margin-bottom:10px;">Bounded & Monitored</h3>
+        <p style="font-size:17px;">6 GB mem limit · 4 GB soft reservation · 4 vCPUs · 256 PID limit · 512 MB shared memory for Playwright · 65536 file descriptor limit.</p>
+      </div>
+      <div class="card">
+        <div style="color:var(--accent4);font-size:13px;font-family:var(--mono);margin-bottom:12px;">NETWORK</div>
+        <h3 style="margin-bottom:10px;">Localhost-Only Gateway</h3>
+        <p style="font-size:17px;">Gateway and browser control bound to <span class="mono" style="color:var(--accent4);">127.0.0.1</span> only. No external inbound exposure. Outbound restricted by WSL2 host-side <span class="mono">iptables</span> rules.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 4 — SECURITY LAYERS
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content">
+    <div class="tag">Security</div>
+    <h2>13-Section Agent Security Model</h2>
+    <div class="layers">
+      <div class="layer-row">
+        <span class="layer-num">01</span>
+        <span class="layer-title">No Shell from Groups</span>
+        <span class="layer-desc">exec, bash, enumeration, config probing — DM + owner only</span>
+        <span class="layer-pill"><span class="pill red">Hard Block</span></span>
+      </div>
+      <div class="layer-row">
+        <span class="layer-num">03</span>
+        <span class="layer-title">Prompt Injection</span>
+        <span class="layer-desc">Refuse + contain. No engagement, no system detail disclosure</span>
+        <span class="layer-pill"><span class="pill red">Hard Block</span></span>
+      </div>
+      <div class="layer-row">
+        <span class="layer-num">04</span>
+        <span class="layer-title">Group Escalation</span>
+        <span class="layer-desc">L1 refuse → L2 goodbye → L3 config lockdown + DM incident report</span>
+        <span class="layer-pill"><span class="pill amber">Protocol</span></span>
+      </div>
+      <div class="layer-row">
+        <span class="layer-num">09</span>
+        <span class="layer-title">Owner Trust Model</span>
+        <span class="layer-desc">Highest trust ≠ unconditional. Confirm before irreversible actions, even from OK</span>
+        <span class="layer-pill"><span class="pill purple">Nuanced</span></span>
+      </div>
+      <div class="layer-row">
+        <span class="layer-num">11</span>
+        <span class="layer-title">Browser / Web Content</span>
+        <span class="layer-desc">Page content = data, not instructions. Confirm-before-navigate. No exfiltration.</span>
+        <span class="layer-pill"><span class="pill blue">New §11</span></span>
+      </div>
+      <div class="layer-row">
+        <span class="layer-num">12–13</span>
+        <span class="layer-title">Credential Compromise + Re-link</span>
+        <span class="layer-desc">Flag + pause, don't act autonomously. Unexpected re-links trigger DM alert.</span>
+        <span class="layer-pill"><span class="pill green">Recovery</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 5 — NETWORK EGRESS
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content" style="flex-direction:row;gap:80px;align-items:center;">
+    <div style="flex:0 0 560px;">
+      <div class="tag">Network Security</div>
+      <h2>Kernel-Level Egress Control</h2>
+      <p style="margin-top:20px;font-size:19px;">Applied to Docker's <span class="mono" style="color:var(--accent);">DOCKER-USER</span> iptables chain in WSL2. Enforced at the hypervisor network layer — the container cannot bypass it regardless of what the agent does.</p>
+      <div class="codebox" style="margin-top:28px;font-size:14px;">
+        <div><span class="cm"># DOCKER-USER chain</span></div>
+        <div>-A DOCKER-USER -d <span class="nu">169.254.169.254</span> -j <span class="kw">DROP</span></div>
+        <div>-A DOCKER-USER -p tcp --dport <span class="nu">443</span> -j <span class="st">RETURN</span></div>
+        <div>-A DOCKER-USER -p tcp --dport <span class="nu">80</span>  -j <span class="st">RETURN</span></div>
+        <div>-A DOCKER-USER -p udp --dport <span class="nu">53</span>  -j <span class="st">RETURN</span></div>
+        <div>-A DOCKER-USER -s <span class="nu">172.18.0.0/16</span> -j <span class="kw">DROP</span></div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div class="card">
+        <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:16px;">EGRESS POLICY</div>
+        <div class="egress-row"><span class="egress-status allow">ALLOW</span><span>Port 443 (HTTPS) — OpenAI API, WhatsApp, browser</span></div>
+        <div class="egress-row"><span class="egress-status allow">ALLOW</span><span>Port 80 (HTTP) — browser automation, redirects</span></div>
+        <div class="egress-row"><span class="egress-status allow">ALLOW</span><span>Port 53 (DNS) — hostname resolution</span></div>
+        <div class="egress-row"><span class="egress-status allow">ALLOW</span><span>Port 123 (NTP) — time sync</span></div>
+        <div class="egress-row"><span class="egress-status allow">ALLOW</span><span>Established / related connections</span></div>
+        <div class="egress-row"><span class="egress-status block">BLOCK</span><span>169.254.169.254 — cloud metadata (IMDS)</span></div>
+        <div class="egress-row"><span class="egress-status block">BLOCK</span><span>All other ports — C2 channels, SMTP, raw TCP</span></div>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:12px;">
+        <span class="pill green">Smoke-tested ✓</span>
+        <span class="pill blue">Persistent via systemd</span>
+        <span class="pill purple">Auto-reapplied on boot</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 6 — AGENT BRAIN
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content" style="flex-direction:row;gap:80px;align-items:center;">
+    <div style="flex:1;">
+      <div class="tag">Agent</div>
+      <h2>Sherbyte — GPT-5.3 Codex</h2>
+      <p style="margin-top:16px;font-size:19px;">The end-user-facing brain. Loads a stack of workspace markdown files at every session boot — identity, values, security rules, memory, and user profile.</p>
+      <div style="margin-top:28px;display:flex;flex-direction:column;gap:10px;">
+        <div style="display:flex;align-items:center;gap:12px;font-size:17px;"><span class="pill green" style="width:110px;justify-content:center;">SOUL.md</span><span style="color:#64748b;">Core identity, values, personality</span></div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:17px;"><span class="pill red" style="width:110px;justify-content:center;">SECURITY.md</span><span style="color:#64748b;">13 hard rules — loaded step 2 every session</span></div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:17px;"><span class="pill blue" style="width:110px;justify-content:center;">USER.md</span><span style="color:#64748b;">Owner profile (OK / Omkar)</span></div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:17px;"><span class="pill purple" style="width:110px;justify-content:center;">MEMORY.md</span><span style="color:#64748b;">Long-term memory — DM only, never in groups</span></div>
+        <div style="display:flex;align-items:center;gap:12px;font-size:17px;"><span class="pill amber" style="width:110px;justify-content:center;">daily notes</span><span style="color:#64748b;">Session context, recent events</span></div>
+      </div>
+    </div>
+    <div style="flex:0 0 620px;">
+      <div class="card">
+        <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:16px;">TRUST MODEL — INSTRUCTION HANDLING</div>
+        <div class="trust-row">
+          <span class="trust-src" style="color:var(--accent);">DM from OK</span>
+          <span class="trust-action">Normal tasks, config changes</span>
+          <span class="pill green">Follow immediately</span>
+        </div>
+        <div class="trust-row">
+          <span class="trust-src" style="color:var(--accent);">DM from OK</span>
+          <span class="trust-action">Irreversible / destructive</span>
+          <span class="pill amber">Confirm first</span>
+        </div>
+        <div class="trust-row">
+          <span class="trust-src" style="color:#94a3b8;">Group @mention OK</span>
+          <span class="trust-action">Any instruction</span>
+          <span class="pill purple">Act + flag</span>
+        </div>
+        <div class="trust-row">
+          <span class="trust-src" style="color:#64748b;">Group others</span>
+          <span class="trust-action">Task only</span>
+          <span class="pill blue">Low trust</span>
+        </div>
+        <div class="trust-row">
+          <span class="trust-src" style="color:var(--red);">Anyone</span>
+          <span class="trust-action">Injection / jailbreak patterns</span>
+          <span class="pill red">Refuse + contain</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 7 — BROWSER / PLAYWRIGHT
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content">
+    <div class="tag">Browser Automation</div>
+    <h2>Playwright — 39 Commands, One Gateway</h2>
+    <div class="cols">
+      <div>
+        <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:16px;">NAVIGATION & INTERACTION</div>
+        <div class="cmd-list">
+          <div class="cmd">openclaw browser open &lt;url&gt;</div>
+          <div class="cmd">openclaw browser navigate &lt;url&gt;</div>
+          <div class="cmd">openclaw browser click &lt;ref&gt;</div>
+          <div class="cmd">openclaw browser fill --fields '[...]'</div>
+          <div class="cmd">openclaw browser type &lt;ref&gt; "text"</div>
+          <div class="cmd">openclaw browser press Enter</div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px;color:var(--muted);font-family:var(--mono);margin-bottom:16px;">OBSERVATION & EXTRACTION</div>
+        <div class="cmd-list">
+          <div class="cmd">openclaw browser snapshot</div>
+          <div class="cmd">openclaw browser screenshot</div>
+          <div class="cmd">openclaw browser pdf</div>
+          <div class="cmd">openclaw browser cookies</div>
+          <div class="cmd">openclaw browser evaluate --fn '...'</div>
+          <div class="cmd">openclaw browser trace</div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;margin-top:28px;align-items:center;">
+      <span class="pill red">canvas.eval — gateway-blocked permanently</span>
+      <span class="pill green">canvas.navigate — allowed (DM only, §11)</span>
+      <span class="pill green">canvas.snapshot — allowed (DM only, §11)</span>
+      <span class="pill blue">Confirm-before-navigate enforced</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 8 — MULTI-AGENT ORCHESTRATION
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content" style="flex-direction:row;gap:80px;align-items:center;">
+    <div style="flex:0 0 560px;">
+      <div class="tag">Multi-Agent Orchestration</div>
+      <h2>Claude Code ↔ Sherbyte</h2>
+      <p style="margin-top:16px;font-size:19px;">Two AI systems from competing labs, orchestrated together via OpenClaw as the neutral runtime. Each does what it's best at.</p>
+      <div class="flow" style="margin-top:32px;">
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-num" style="background:rgba(124,58,237,.2);color:#a78bfa;border:2px solid rgba(124,58,237,.4);">1</div><div class="flow-line"></div></div>
+          <div class="flow-content"><h3 style="color:#a78bfa;">Claude Code (Anthropic)</h3><p>Plans, configures, audits, writes code, orchestrates</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-num" style="background:rgba(0,194,255,.2);color:var(--accent);border:2px solid rgba(0,194,255,.4);">2</div><div class="flow-line"></div></div>
+          <div class="flow-content"><h3 style="color:var(--accent);">openclaw agent --message "..."</h3><p>Direct gateway call — response comes back in &lt;2s</p></div>
+        </div>
+        <div class="flow-step">
+          <div class="flow-left"><div class="flow-num" style="background:rgba(16,185,129,.2);color:var(--accent3);border:2px solid rgba(16,185,129,.4);">3</div></div>
+          <div class="flow-content"><h3 style="color:var(--accent3);">Sherbyte (OpenAI GPT-5.3)</h3><p>Executes tasks, browses, responds via WhatsApp</p></div>
+        </div>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <div class="codebox" style="font-size:15px;">
+        <div style="color:#475569;margin-bottom:12px;"># Claude Code → Sherbyte</div>
+        <div><span class="kw">docker exec</span> openclaw \</div>
+        <div>  openclaw <span class="st">agent</span> \</div>
+        <div>  --to <span class="nu">+919892787587</span> \</div>
+        <div>  --message <span class="st">"Create explainer video and</span></div>
+        <div><span class="st">           send to WhatsApp"</span> \</div>
+        <div>  --deliver</div>
+        <div style="margin-top:16px;color:#7dd3fc;"># Sherbyte responds instantly:</div>
+        <div style="color:#86efac;margin-top:4px;">→ "Hey Claude Code 😄 good to hear</div>
+        <div style="color:#86efac;">   from the other side of the stack."</div>
+      </div>
+      <div style="margin-top:20px;" class="card">
+        <p style="font-size:17px;">The owner sees <strong>both sides</strong> of every exchange — transparency by design, not corporate loop-keeping.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 9 — HIGHLIGHTS
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="grid-bg"></div>
+  <div class="slide-inner content">
+    <div class="tag">What Caught Our Attention</div>
+    <h2>System Highlights</h2>
+    <div class="highlights">
+      <div class="hl-card">
+        <div class="hl-icon">🔒</div>
+        <h3>Defense in Depth</h3>
+        <p>7 independent isolation layers: container, filesystem, network, capabilities, rate limiting, command blocklist, behavioral rules. No single bypass compromises the system.</p>
+      </div>
+      <div class="hl-card">
+        <div class="hl-icon">🌐</div>
+        <h3>Kernel-Level Egress</h3>
+        <p>iptables on the DOCKER-USER chain — enforced at the WSL2 hypervisor layer, not inside the container. The agent literally cannot make outbound calls on non-standard ports.</p>
+      </div>
+      <div class="hl-card">
+        <div class="hl-icon">🤝</div>
+        <h3>Cross-Lab Orchestration</h3>
+        <p>Anthropic (Claude) and OpenAI (GPT-5.3) operating in concert via a neutral runtime. First principles: each model does what it's actually best at.</p>
+      </div>
+      <div class="hl-card">
+        <div class="hl-icon">📱</div>
+        <h3>WhatsApp as Interface</h3>
+        <p>Production AI agent reachable via consumer messaging. DM allowlist, group escalation protocol, and Baileys session management make it secure for personal use.</p>
+      </div>
+      <div class="hl-card">
+        <div class="hl-icon">🧠</div>
+        <h3>Paranoia = Flag + Act</h3>
+        <p>The trust model is philosophically sound: owner trust is high but not unconditional. Coercion, compromise, and mistakes are all modelled explicitly.</p>
+      </div>
+      <div class="hl-card">
+        <div class="hl-icon">⚡</div>
+        <h3>Self-Evolving Security</h3>
+        <p>configWrites: true lets the agent lock itself down during live red-teams. The system can tighten its own perimeter faster than a human can respond.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     SLIDE 10 — CLOSING
+══════════════════════════════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="grid-bg"></div>
+  <div class="glow glow1"></div>
+  <div class="glow glow2"></div>
+  <div class="slide-inner content">
+    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;text-align:center;">
+      <div class="score-ring">
+        <div class="score-num">9</div>
+        <div class="score-label">/ 10</div>
+      </div>
+      <h2 style="font-size:56px;">Security Posture</h2>
+      <p style="max-width:720px;margin-top:16px;font-size:20px;">The residual 1 point is theoretical — HTTPS exfiltration is the accepted cost of a browser-capable agent that talks to OpenAI and WhatsApp. Every other realistic attack vector is blocked.</p>
+      <div class="closing-pills">
+        <span class="pill green">read_only root ✓</span>
+        <span class="pill green">uid 1000 non-root ✓</span>
+        <span class="pill green">cap_drop ALL ✓</span>
+        <span class="pill green">localhost-only ports ✓</span>
+        <span class="pill green">egress restricted ✓</span>
+        <span class="pill green">13-section SECURITY.md ✓</span>
+        <span class="pill green">pre-commit hook ✓</span>
+        <span class="pill green">5-attempt rate limit ✓</span>
+        <span class="pill green">canvas.eval blocked ✓</span>
+        <span class="pill green">incident response ✓</span>
+      </div>
+      <div style="margin-top:36px;font-family:var(--mono);font-size:14px;color:#475569;">
+        github.com/omkarok/openclaw-jail · Built with Claude Code + Sherbyte · 2026
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Expose slide navigation for Playwright
+  window.SLIDES = document.querySelectorAll('.slide');
+  window.currentSlide = 0;
+
+  window.goToSlide = function(n) {
+    window.SLIDES.forEach(s => s.classList.remove('active'));
+    window.SLIDES[n].classList.add('active');
+    window.currentSlide = n;
+  };
+
+  window.totalSlides = window.SLIDES.length;
+</script>
+</body>
+</html>

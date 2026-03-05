@@ -1,0 +1,13 @@
+# Contact lists and exported data — PII, never commit
+*.csv
+*.vcf
+*.json.bak
+
+# Runtime memory logs — operational noise, not source
+memory/
+
+# Local scratch / secrets
+local.md
+.env
+*.secret
+node_modules/

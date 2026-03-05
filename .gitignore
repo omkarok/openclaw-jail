@@ -1,7 +1,25 @@
 # Runtime state — never commit
 openclaw-home/
-workspace/
 logs/
+
+# workspace — tracked; ignore generated/runtime noise
+workspace/results/tts/
+workspace/results/_video_work_*/
+workspace/results/demo-assets/
+workspace/results/demo-v2/
+workspace/results/yt-openclaw/
+workspace/results/*.mp4
+workspace/results/*.webm
+workspace/results/*.mp3
+workspace/results/*.pptx
+workspace/results/audio-concat.txt
+workspace/results/narration.mp3
+workspace/results/tts-test*
+workspace/agents/worker/runs/
+workspace/task-queue/receipts/
+workspace/memory/
+workspace/.venv_demo/
+workspace/node_modules/
 
 # Backup files created by openclaw config set
 *.bak

@@ -1,0 +1,98 @@
+# HEARTBEAT.md — Sherbyte Periodic Checks
+
+On each heartbeat, work through this checklist in order.
+Reply HEARTBEAT_OK only if nothing needs attention after all checks.
+
+---
+
+## 0. Notifications (every heartbeat)
+- Read `/home/node/workspace/notifications.json`.
+- Find entries where `sent=false`.
+- For each unsent notification:
+  - If it has a `media_path` field: send as a media file to OK on WhatsApp (attach the file at `media_path`, use `message` as the caption).
+  - Otherwise: send `message` as a plain WhatsApp text to OK.
+- Update `notifications.json` marking each as `sent=true` with `sent_at` ISO timestamp.
+
+## 1. Escalation Check (every heartbeat)
+
+Read `/home/node/workspace/escalations.json`.
+Find entries where `"acknowledged": false`.
+
+If any exist:
+- Consolidate into ONE WhatsApp message to OK (not one per escalation)
+- Format:
+
+```
+⚠️ Worker escalation(s) need attention:
+
+1. [task_id] (<title>) — <reason> — <detail>
+   Next step: <suggested_action>
+
+2. ...
+```
+
+- Do NOT mark them acknowledged — OK must confirm
+- After sending, note the dedup_keys you alerted on in `/home/node/workspace/memory/heartbeat-state.json` under `"last_escalation_alert"` with a timestamp, to avoid re-alerting the same items within 2 hours
+
+If none: continue silently.
+
+---
+
+## 2. Background Worker Health (every ~2h — every 4th heartbeat)
+
+Check the latest file in `/home/node/workspace/agents/worker/runs/`.
+- If most recent receipt is older than 26 hours: note silently
+- If older than 48 hours: alert OK — worker may have stopped
+- If latest receipt `summary` contains "ERROR": alert OK immediately
+
+---
+
+## 2b. Pending task trigger (every heartbeat)
+
+Read `/home/node/workspace/task-queue/queue.json`.
+Check if any tasks have `status: "pending"` where `run_after` is null or in the past.
+
+If yes:
+- Check `/home/node/workspace/agents/worker/runs/` for the most recent receipt timestamp.
+- If the most recent run was more than 15 minutes ago (or no receipts exist):
+  - Trigger the worker: `docker compose exec -T openclaw openclaw agent run --agent background-worker`
+  - This closes the latency gap when an explicit trigger was missed.
+- If the most recent run was within 15 minutes: skip (worker ran recently, task will be picked up or is in flight).
+
+---
+
+## 2c. Stale escalation alarm (every heartbeat)
+
+Read `/home/node/workspace/escalations.json`.
+Find entries where `acknowledged: false` AND `created_at` is more than 2 hours ago.
+
+If any exist AND the last stale-escalation alert (tracked in `/home/node/workspace/memory/heartbeat-state.json` under `last_stale_escalation_alert`) was more than 2 hours ago:
+- Send ONE WhatsApp message to OK:
+  `⏰ Unacknowledged escalation(s) older than 2h — <N> item(s) still pending your response. Check escalations.json.`
+- Update `last_stale_escalation_alert` in heartbeat-state.json.
+
+---
+
+## 3. Task Intake Decomposition (on !task receipt)
+
+When a new `!task` is received, decompose before enqueueing if any trigger is true:
+- More than one distinct deliverable is requested
+- The work likely needs more than 3 operational steps
+- The request implies dependent artifacts (A needed before B)
+
+How to split:
+1. Convert each deliverable/stage into an atomic queue task with one clear output path
+2. Chain tasks with `depends_on` to encode order
+3. Set concrete titles, minimal scope, explicit success criteria per task
+4. Enqueue all tasks in one queue write, then trigger worker once
+
+Example — `!task Build full campaign pack (research + post + deck + video script)`:
+- `t-campaign-research` — research brief
+- `t-campaign-post` — depends_on research
+- `t-campaign-deck` — depends_on research
+- `t-campaign-video` — depends_on research
+- `t-campaign-deliver` — depends_on post+deck+video
+
+---
+
+## 4. Nothing to report → HEARTBEAT_OK

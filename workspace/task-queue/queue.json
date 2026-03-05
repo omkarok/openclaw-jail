@@ -1,0 +1,1171 @@
+{
+  "schema_version": 2,
+  "updated": "2026-03-05T06:14:03Z",
+  "tasks": [
+    {
+      "id": "t001",
+      "title": "Memory digest — last 7 days",
+      "priority": "normal",
+      "type": "memory-digest",
+      "status": "done",
+      "recurring": true,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 3,
+      "run_after": "2026-03-05T10:07:28Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Read all memory files in /home/node/workspace/memory/ from the past 7 days. Summarise key events, decisions, and lessons into a structured digest. Skip files older than 7 days.",
+        "source_path": "/home/node/workspace/memory/"
+      },
+      "output_path": "/home/node/workspace/results/memory-digest-latest.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "standing",
+        "daily"
+      ]
+    },
+    {
+      "id": "t002",
+      "title": "SHARED_CONTEXT pending actions check",
+      "priority": "high",
+      "type": "vault-health",
+      "status": "done",
+      "recurring": true,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 3,
+      "run_after": "2026-03-05T10:07:28Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Check SHARED_CONTEXT.md at /home/node/workspace/SHARED_CONTEXT.md for any pending actions ([ ] items). List them. Do not apply them — just report what is pending.",
+        "source_path": "/home/node/workspace/SHARED_CONTEXT.md"
+      },
+      "output_path": "/home/node/workspace/results/shared-context-check.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "standing",
+        "daily"
+      ]
+    },
+    {
+      "id": "t003",
+      "title": "Daily system health summary",
+      "priority": "normal",
+      "type": "run-health",
+      "status": "done",
+      "recurring": true,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 3,
+      "run_after": "2026-03-05T10:07:28Z",
+      "depends_on": [
+        "t001",
+        "t002"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Review the results from t001 and t002 (memory-digest-latest.md and shared-context-check.md). Write a concise 5-line system health summary covering: memory status, pending actions, anything needing OK's attention.",
+        "sources": [
+          "/home/node/workspace/results/memory-digest-latest.md",
+          "/home/node/workspace/results/shared-context-check.md"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/daily-summary.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "standing",
+        "daily"
+      ]
+    },
+    {
+      "id": "t004",
+      "title": "Implement notifications system",
+      "priority": "high",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T09:47:18Z",
+      "error": null,
+      "input": {
+        "description": "Implement the notifications system so the background worker can send WhatsApp messages to OK via Sherbyte's heartbeat. Follow these exact steps:",
+        "steps": [
+          "1. Create /home/node/workspace/notifications.json with this exact content: {\"schema_version\": 1, \"notifications\": []}",
+          "2. Read /home/node/workspace/HEARTBEAT.md",
+          "3. Rewrite HEARTBEAT.md to add a new section '## 0. Notifications (every heartbeat)' at the top, BEFORE the escalation check. This section should: read /home/node/workspace/notifications.json, find entries where sent=false, send each as a WhatsApp message to OK, then update notifications.json to mark them sent=true with sent_at timestamp. Keep all existing sections intact.",
+          "4. Write a bootstrap notification to /home/node/workspace/notifications.json: {\"schema_version\": 1, \"notifications\": [{\"id\": \"n001\", \"created_at\": \"<current ISO timestamp>\", \"sent\": false, \"sent_at\": null, \"source\": \"background-worker\", \"task_id\": \"t004\", \"message\": \"✅ Feature shipped: Notifications system is now live. Background worker can now send you WhatsApp updates on feature completions.\"}]}"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/t004-notifications-impl.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "self-improvement",
+        "infrastructure"
+      ]
+    },
+    {
+      "id": "t005",
+      "title": "Implement per-attempt receipts",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t004"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T09:47:18Z",
+      "error": null,
+      "input": {
+        "description": "Implement per-attempt receipts so every task execution attempt is individually recorded. Follow these exact steps:",
+        "steps": [
+          "1. Create directory /home/node/workspace/task-queue/receipts/ by writing a placeholder file /home/node/workspace/task-queue/receipts/.keep with content 'per-attempt receipts directory'",
+          "2. Write a sample receipt for this task (t005, attempt 1) to /home/node/workspace/task-queue/receipts/2026-03-04/t005__attempt-1__<current-ISO-timestamp>.json with schema: {receipt_version: 1, timestamp, worker_id: 'background-worker', task_id: 't005', attempt: 1, status: 'done', started_at, finished_at, duration_ms, output: {summary: 'Per-attempt receipts implemented'}, error: null, queue_snapshot: {status_before: 'pending', status_after: 'done'}}",
+          "3. Read /home/node/workspace/agents/worker/MANDATE.md",
+          "4. In MANDATE.md, find Step 5 (Run receipt). Add a new step 5b immediately after it: '### Step 5b — Per-attempt receipt\\nWrite a per-attempt receipt to /home/node/workspace/task-queue/receipts/YYYY-MM-DD/<task_id>__attempt-<n>__<ISO-timestamp>.json with schema: {receipt_version, timestamp, worker_id, task_id, attempt, status, started_at, finished_at, duration_ms, output: {summary}, error, queue_snapshot: {status_before, status_after}}'",
+          "5. Update the mandate_version in MANDATE.md from '1.1' to '1.2' everywhere it appears",
+          "6. Append to /home/node/workspace/notifications.json a new notification: {id: 'n002', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't005', message: '✅ Feature shipped: Per-attempt receipts. Every task execution is now individually recorded at task-queue/receipts/YYYY-MM-DD/'}"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/t005-receipts-impl.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "self-improvement",
+        "auditability"
+      ]
+    },
+    {
+      "id": "t006",
+      "title": "Implement weekly digest generator",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t004"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T09:47:30Z",
+      "error": null,
+      "input": {
+        "description": "Implement the weekly digest generator. Follow these exact steps:",
+        "steps": [
+          "1. Create directory /home/node/workspace/task-queue/digests/ by writing /home/node/workspace/task-queue/digests/.keep with content 'weekly digests directory'",
+          "2. Read all files in /home/node/workspace/agents/worker/runs/ to gather run data",
+          "3. Generate a weekly digest at /home/node/workspace/task-queue/digests/weekly-2026-W10.md using this template: '# Worker Weekly Digest (2026-W10)\\nGenerated: <ISO>\\nPeriod: 2026-02-26 → 2026-03-04\\n\\n## Summary\\n- Runs this week: <count>\\n- Tasks completed: <count>\\n- Tasks failed: 0\\n- Escalations: 0\\n\\n## Standing Tasks Status\\n- t001 memory-digest: operational\\n- t002 vault-health: operational\\n- t003 run-health: operational\\n\\n## Self-Improvement Tasks\\n- t004 notifications: shipped\\n- t005 per-attempt receipts: shipped\\n- t006 weekly digest: shipping now\\n\\n## Notes\\n<any observations from run receipts>'",
+          "4. Add a new weekly digest task to /home/node/workspace/task-queue/queue.json. Read the current queue.json and append a new task: {id: 't-weekly-digest', title: 'Weekly digest generator', priority: 'low', type: 'weekly-digest', status: 'pending', recurring: true, created: <ISO>, created_by: 'background-worker', retries: 0, max_retries: 2, run_after: null, depends_on: [], locked_at: null, owner: null, completed_at: null, error: null, input: {description: 'Read all run receipts from /home/node/workspace/agents/worker/runs/ from the past 7 days. Generate a weekly digest at /home/node/workspace/task-queue/digests/weekly-YYYY-Www.md with sections: Summary totals, failure breakdown, needs attention, completed tasks. Send digest path as a notification.'}, output_path: '/home/node/workspace/task-queue/digests/weekly-latest.md', escalate_after_ms: 7200000, tags: ['standing', 'weekly']}",
+          "5. Add weekly-digest as a task type in /home/node/workspace/agents/worker/MANDATE.md under Task Types: '### weekly-digest\\nRead run receipts from the past 7 days in source_path. Generate a structured weekly digest at output_path. Write a notification summarising the digest.'",
+          "6. Append to /home/node/workspace/notifications.json: {id: 'n003', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't006', message: '✅ Feature shipped: Weekly digest generator. First digest at task-queue/digests/weekly-2026-W10.md. A standing weekly task has been added to the queue.'}"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/t006-digest-impl.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "self-improvement",
+        "observability"
+      ]
+    },
+    {
+      "id": "t007",
+      "title": "Implement failure spike detection",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t004"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T09:47:30Z",
+      "error": null,
+      "input": {
+        "description": "Implement failure spike detection in Sherbyte's heartbeat. Follow these exact steps:",
+        "steps": [
+          "1. Read /home/node/workspace/HEARTBEAT.md",
+          "2. Add a new section '## 2b. Failure Spike Detection (every ~2h — every 4th heartbeat)' between sections 2 and 3. Content: 'Read all files in /home/node/workspace/agents/worker/runs/ modified in the last 60 minutes. Count total tasks_failed across those receipts. If count >= 3: send ONE alert to OK on WhatsApp: \"⚠️ Worker failure spike: <N> task failures in the last hour. Check /home/node/workspace/escalations.json for details.\" Track last spike alert in memory/heartbeat-state.json under last_spike_alert to avoid re-alerting within 2 hours.'",
+          "3. Append to /home/node/workspace/notifications.json: {id: 'n004', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't007', message: '✅ Feature shipped: Failure spike detection. Sherbyte will now alert you if 3+ task failures occur within 60 minutes.'}"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/t007-spike-impl.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "self-improvement",
+        "reliability"
+      ]
+    },
+    {
+      "id": "t008",
+      "title": "Self-improvement sprint summary",
+      "priority": "urgent",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T00:00:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t005",
+        "t006",
+        "t007"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T09:47:30Z",
+      "error": null,
+      "input": {
+        "description": "All self-improvement tasks are done. Send a final summary notification. Follow these exact steps:",
+        "steps": [
+          "1. Read /home/node/workspace/results/t005-receipts-impl.md, t006-digest-impl.md, t007-spike-impl.md to confirm all completed",
+          "2. Append to /home/node/workspace/notifications.json: {id: 'n005', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't008', message: '🚀 Self-improvement sprint complete!\\n\\nFeatures shipped by background worker:\\n✅ Notifications system (t004)\\n✅ Per-attempt receipts (t005)\\n✅ Weekly digest generator (t006)\\n✅ Failure spike detection (t007)\\n\\nWorker upgraded itself from MANDATE v1.1 → v1.2. All features live. Next daily run: 08:00 IST.'}"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/t008-sprint-summary.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "self-improvement",
+        "summary"
+      ]
+    },
+    {
+      "id": "t-weekly-digest",
+      "title": "Weekly digest generator",
+      "priority": "low",
+      "type": "weekly-digest",
+      "status": "done",
+      "recurring": true,
+      "created": "2026-03-04T09:47:18Z",
+      "created_by": "background-worker",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": "2026-03-11T10:07:28Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:29:00Z",
+      "error": null,
+      "input": {
+        "description": "Read all run receipts from /home/node/workspace/agents/worker/runs/ from the past 7 days. Generate a weekly digest at /home/node/workspace/task-queue/digests/weekly-YYYY-Www.md with sections: Summary totals, failure breakdown, needs attention, completed tasks. Send digest path as a notification."
+      },
+      "output_path": "/home/node/workspace/task-queue/digests/weekly-latest.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "standing",
+        "weekly"
+      ]
+    },
+    {
+      "id": "t-1772618323",
+      "title": "what are the top 5 most practical LLM agent frameworks in 20",
+      "priority": "normal",
+      "type": "research",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T09:58:43Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 0,
+      "max_retries": 3,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:07:28Z",
+      "error": null,
+      "input": {
+        "description": "research: what are the top 5 most practical LLM agent frameworks in 2026 and how do they compare to openclaw's architecture?"
+      },
+      "output_path": "/home/node/workspace/results/t-1772618323.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "user-request"
+      ]
+    },
+    {
+      "id": "t-ma-research",
+      "title": "Multi-agent architecture content brief",
+      "priority": "high",
+      "type": "research",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Read these files and compile a content brief for explainer content about this multi-agent architecture. Files to read: /home/node/workspace/agents/worker/MANDATE.md, /home/node/workspace/AGENTS.md, /home/node/workspace/SOUL.md, /home/node/workspace/task-queue/queue.json, and the latest 3 run receipts in /home/node/workspace/agents/worker/runs/. Extract: (1) Architecture overview: Sherbyte + Background Worker + OpenClaw. (2) Key features: task DAG, failure taxonomy, crash recovery, escalation loop, notifications, recurring tasks, self-improvement sprint. (3) Hero moments: worker self-upgraded MANDATE v1.1->v1.3, !task from WhatsApp groups, full autonomous pipeline. (4) ASCII architecture diagram (3-layer hub-and-spoke). (5) Demo moments: queue.json with tasks, run receipts, notifications delivered. Write to /home/node/workspace/results/ma-content-brief.md with sections: Overview, Architecture Diagram (ASCII), Key Features, Hero Moments, Demo Assets (actual file snippets), Target Audience, Key Messages, Talking Points."
+      },
+      "output_path": "/home/node/workspace/results/ma-content-brief.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "foundation"
+      ]
+    },
+    {
+      "id": "t-ma-post",
+      "title": "Thought-leader social post 800w",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-research"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Write an 800-word thought-leader social post about this multi-agent AI architecture.",
+        "steps": [
+          "1. Read /home/node/workspace/results/ma-content-brief.md",
+          "2. Write an 800-word thought-leader post to /home/node/workspace/results/ma-social-post.md. Style: LinkedIn/X, first-person, concrete and specific, no buzzwords, conversational but authoritative. Structure: Hook (something surprising happened while I slept) -> The problem with reactive AI -> Our 3-layer architecture (OpenClaw runtime + Sherbyte personal bridge + Background Worker) -> The self-improvement hero moment (worker rewrote its own MANDATE from v1.1 to v1.3 overnight) -> The !task feature (type in WhatsApp group, result arrives autonomously) -> What this means for the future of AI assistants -> CTA. Include ASCII architecture diagram inline. Count words, aim for 780-820 words.",
+          "3. Read the written post back from the file. Append to /home/node/workspace/notifications.json: id \"n-ma-post\", sent false, message beginning with \"📝 Thought-leader post (800w):\n\n\" followed by the FULL post text."
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-social-post.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "content"
+      ]
+    },
+    {
+      "id": "t-ma-video-script",
+      "title": "Demo explainer video — full script + TTS narration",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-research"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Write full demo-style explainer video script with narration text ready for TTS.",
+        "steps": [
+          "1. Read /home/node/workspace/results/ma-content-brief.md",
+          "2. Write a complete video script to /home/node/workspace/results/ma-video-script.md. This is a DEMO-STYLE video showing the actual system working. Structure each scene as:\n## SCENE N: [Title]\n**Visual:** [what is on screen — actual file content, terminal, WhatsApp UI, diagram]\n**Narration:** [exact words to speak, written for TTS — natural, no stage directions]\n**Duration:** [seconds]\n**Demo asset:** [which file/screenshot to show, e.g. queue.json, run receipt, WhatsApp message]\n\n12 scenes covering: (1) Hook: WhatsApp shows a task notification arriving — \"your AI sent you this while you slept\". (2) Problem: reactive AI just waits for prompts. (3) Solution overview: 3-layer architecture diagram. (4) OpenClaw: the cross-channel runtime fabric. (5) Sherbyte: personal AI, real-time bridge, heartbeat loop. (6) Background Worker: headless, cron-driven, reads MANDATE.md. (7) Task queue in action: show queue.json with actual tasks. (8) DAG execution: depends_on, parallel tasks, how t001+t002 unlock t003. (9) Self-improvement hero: worker rewrites MANDATE v1.1->v1.3 — show the diff. (10) !task demo: user types in WhatsApp group, result arrives 8 hours later. (11) Notification receipts: show the actual WhatsApp messages received. (12) CTA: this is open architecture, here is how to build it. After all scenes, write a ## NARRATION ONLY section with JUST the narration text concatenated scene by scene (for feeding to TTS as one document).",
+          "3. Append to /home/node/workspace/notifications.json: id \"n-ma-video\", sent false, message \"🎬 Video script ready (12 scenes, demo-style with TTS narration)\nScript: /home/node/workspace/results/ma-video-script.md\nNarration section ready for TTS. Next: TTS audio generation (t-ma-tts) and screenshots (t-ma-screenshots).\""
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-video-script.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "content"
+      ]
+    },
+    {
+      "id": "t-ma-screenshots",
+      "title": "Demo screenshot assets — system in action",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-research"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Generate demo screenshot assets showing the system working in action.",
+        "steps": [
+          "1. Create directory /home/node/workspace/results/demo-assets/ by writing a .keep file there.",
+          "2. Read /home/node/workspace/task-queue/queue.json and write a formatted \"screenshot\" of the task queue to /home/node/workspace/results/demo-assets/01-task-queue.md. Format it as a beautiful terminal-style display showing task IDs, titles, statuses, priorities, and dependencies. Make it look like a real CLI dashboard output.",
+          "3. Read the latest 2 run receipts from /home/node/workspace/agents/worker/runs/ and write a formatted display to /home/node/workspace/results/demo-assets/02-run-receipts.md. Show the receipt fields in a clean terminal-style format with box-drawing characters.",
+          "4. Read /home/node/workspace/notifications.json and write /home/node/workspace/results/demo-assets/03-whatsapp-notifications.md. Format each notification as a WhatsApp-style message bubble: timestamp | message content. Show the full notification history as if it is a WhatsApp chat.",
+          "5. Read /home/node/workspace/agents/worker/MANDATE.md and write /home/node/workspace/results/demo-assets/04-mandate-evolution.md showing the MANDATE version history and the self-improvement story: what changed from v1.1 to v1.3 and HOW the worker updated itself (show the relevant queue tasks t004-t008 that did it).",
+          "6. Write /home/node/workspace/results/demo-assets/00-index.md listing all demo assets with a one-line description of each and which video scene it belongs to.",
+          "7. Append to /home/node/workspace/notifications.json: id \"n-ma-screenshots\", sent false, message \"📸 Demo assets ready (4 screenshots + index)\nDir: /home/node/workspace/results/demo-assets/\n01-task-queue, 02-run-receipts, 03-whatsapp-notifications, 04-mandate-evolution\""
+        ]
+      },
+      "output_path": "/home/node/workspace/results/demo-assets/00-index.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "demo-assets"
+      ]
+    },
+    {
+      "id": "t-ma-slides",
+      "title": "Explainer deck slide content (15 slides)",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-research"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:28:59Z",
+      "error": null,
+      "input": {
+        "description": "Write structured 15-slide deck content for the explainer deck.",
+        "steps": [
+          "1. Read /home/node/workspace/results/ma-content-brief.md",
+          "2. Write slide-by-slide content to /home/node/workspace/results/ma-slides-content.md. For each slide use this format:\n## SLIDE N: [Title]\n**Headline:** [punchy one-liner]\n**Bullets:**\n- ...\n- ...\n- ...\n**Speaker Notes:** [2-3 sentences for presenter]\n**Visual:** [what to show on this slide]\n\nSlides: 1-Title (tagline: \"Your AI that works while you sleep\"), 2-The Problem (AI assistants are reactive waiters), 3-Our Architecture (3 layers, hub-and-spoke), 4-Architecture Diagram (full ASCII diagram, large font), 5-OpenClaw: The Runtime Fabric, 6-Sherbyte: Personal AI + Real-Time Bridge, 7-Background Worker: Autonomous Executor, 8-Task Queue + DAG (show queue.json snippet), 9-Self-Improvement Sprint (hero story: worker upgraded itself), 10-!task from WhatsApp Groups, 11-The Full Notification Loop, 12-Production Results (0 failures, N tasks completed), 13-What This Enables (proactive AI is real), 14-How to Build This (OpenClaw + your agent), 15-Q&A + Next Steps.",
+          "3. Append to /home/node/workspace/notifications.json: id \"n-ma-slides\", sent false, message \"📊 Slide content ready (15 slides)\nFile: /home/node/workspace/results/ma-slides-content.md\nBuilding PPTX next...\""
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-slides-content.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "content"
+      ]
+    },
+    {
+      "id": "t-ma-tts",
+      "title": "Generate TTS narration audio from video script",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-video-script"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:29:00Z",
+      "error": null,
+      "input": {
+        "description": "Generate TTS audio narration from the video script using OpenAI TTS API.",
+        "steps": [
+          "1. Read /home/node/workspace/results/ma-video-script.md and extract the NARRATION ONLY section.",
+          "2. Write a Python script to /home/node/workspace/results/generate-tts.py that: (a) Installs openai if missing: import subprocess; subprocess.run([\"pip3\",\"install\",\"openai\",\"-q\",\"--break-system-packages\"]). (b) Reads the narration text from /home/node/workspace/results/ma-video-script.md (the NARRATION ONLY section). (c) Splits narration into per-scene chunks (split by \"SCENE\" markers). (d) For each scene chunk, calls openai.audio.speech.create(model=\"tts-1\", voice=\"onyx\", input=chunk) and saves to /home/node/workspace/results/tts/scene-N.mp3. (e) Also generates a full combined narration file: scene-all.mp3. (f) Creates /home/node/workspace/results/tts/ directory first. Use the OPENAI_API_KEY environment variable for auth.",
+          "3. Create directory: write /home/node/workspace/results/tts/.keep",
+          "4. Execute: python3 /home/node/workspace/results/generate-tts.py",
+          "5. Append to /home/node/workspace/notifications.json: id \"n-ma-tts\", sent false, message \"🎙️ TTS narration audio generated\nFiles: /home/node/workspace/results/tts/\nscene-1.mp3 through scene-12.mp3 + scene-all.mp3\nVoice: OpenAI onyx\""
+        ]
+      },
+      "output_path": "/home/node/workspace/results/tts/scene-all.mp3",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "tts"
+      ]
+    },
+    {
+      "id": "t-ma-pptx",
+      "title": "Build explainer PPTX file",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-slides"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T11:02:18Z",
+      "error": null,
+      "input": {
+        "description": "Generate a PowerPoint PPTX from the slide content using python-pptx.",
+        "steps": [
+          "1. Read /home/node/workspace/results/ma-slides-content.md carefully — extract all 15 slides with their titles, headlines, and bullet points.",
+          "2. Write a complete Python script to /home/node/workspace/results/generate-pptx.py. The script must: (a) Install python-pptx: import subprocess; subprocess.run([\"pip3\",\"install\",\"python-pptx\",\"-q\",\"--break-system-packages\"]). (b) from pptx import Presentation; from pptx.util import Inches, Pt; from pptx.dml.color import RGBColor. (c) Create presentation, set slide size to widescreen (13.33 x 7.5 inches). (d) For each of the 15 slides: add a blank layout slide, set background fill to RGB(15,15,25), add title textbox at top with white text 36pt bold, add headline textbox below title with RGB(99,179,237) text 20pt italic, add bullets textbox with RGB(220,220,220) text 18pt, add slide number in bottom-right corner RGB(100,100,120) 12pt. (e) Hardcode all 15 slides content directly in the script from the slide content file. (f) prs.save(\"/home/node/workspace/results/ma-explainer.pptx\"). Write the COMPLETE script — do not use placeholders.",
+          "3. Execute: python3 /home/node/workspace/results/generate-pptx.py",
+          "4. Append to /home/node/workspace/notifications.json: id \"n-ma-pptx\", sent false, media_path \"/home/node/workspace/results/ma-explainer.pptx\", message \"📊 Explainer deck ready — 15 slides, dark theme (ma-explainer.pptx)\""
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-explainer.pptx",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "build"
+      ]
+    },
+    {
+      "id": "t-ma-deliver",
+      "title": "Explainer sprint — final delivery summary",
+      "priority": "urgent",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T10:26:09Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-ma-post",
+        "t-ma-tts",
+        "t-ma-pptx",
+        "t-ma-screenshots"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T10:42:25Z",
+      "error": null,
+      "input": {
+        "description": "All explainer assets complete. Send final summary to OK.",
+        "steps": [
+          "1. Confirm files exist in /home/node/workspace/results/: ma-social-post.md, ma-video-script.md, ma-slides-content.md, ma-explainer.pptx, tts/ directory, demo-assets/ directory.",
+          "2. Append to /home/node/workspace/notifications.json: id \"n-ma-done\", sent false, message \"🚀 Explainer sprint COMPLETE!\n\nDelivered:\n✅ Social post (800w) — sent to WhatsApp above\n✅ Video script (12 scenes, demo-style) — sent above\n✅ TTS narration audio — scene-1.mp3 to scene-12.mp3 + scene-all.mp3\n✅ Slide deck (15 slides PPTX) — sent to WhatsApp above\n✅ Demo assets (task queue, run receipts, WhatsApp history, MANDATE evolution)\n\nNext steps:\n-> Post the social post on LinkedIn/X\n-> Import PPT + sync TTS audio scenes for the video\n-> Or record screen with narration using the script\n-> Demo assets in /results/demo-assets/ for video b-roll\""
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-deliver-summary.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "explainer-sprint",
+        "delivery"
+      ]
+    },
+    {
+      "id": "t-slides-v2",
+      "title": "Regenerate slide deck — real content from thought leadership post",
+      "priority": "high",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T11:23:27Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T11:25:19Z",
+      "error": null,
+      "input": {
+        "description": "Extract 15 slides from the provided post and write as structured JSON.",
+        "post_content": "The future of proactive AI systems\n\nAt 3:12 AM my AI assistant finished work while I was asleep. Nobody prompted it. Nobody was online.\n\nA few hours earlier I had sent a single WhatsApp message: !task write: explain the future of proactive AI systems. That was it.\n\nWhile I slept, the system queued the request, executed the job, generated artifacts, and marked the task complete.\n\nMost AI assistants today are still reactive. They wait for prompts. They answer questions. Then they disappear. That is not how useful systems behave.\n\nEmail servers do not wait for prompts. Build pipelines do not wait for prompts. Monitoring systems do not wait for prompts. They run continuously. AI assistants should too.\n\nThe shift is not about bigger models. It is about architecture. Instead of building a chatbot, we built an assistant system.\n\nThree layers handle the work:\n- OpenClaw: The runtime fabric responsible for channels, tools, and orchestration.\n- Sherbyte: The human bridge that manages messages, context, heartbeat checks, and escalation visibility.\n- Background Workers: Headless executors that read tasks, perform work, generate artifacts, and emit receipts.\n\nEverything runs through a durable queue. Each task moves through a clear lifecycle: pending -> in_progress -> done / failed. Dependencies are declared with depends_on. Retries and scheduling are controlled through run_after. If a worker crashes mid-task, the next cycle recovers stale locks and continues. No hidden state. No fragile memory tricks. Just deterministic progress.\n\nThe architecture: Human (WhatsApp) -> Sherbyte -> OpenClaw Runtime -> Durable Task Queue -> Background Worker -> Artifacts + Notifications\n\nOnce this loop exists, a message like !task research: AI copilot market landscape becomes a job. On one overnight run the system scraped 18 sources, generated a structured research brief, saved artifacts, emitted execution receipts, and delivered results back to WhatsApp. All triggered by a single message.\n\nLessons from building this:\n1. Separate interaction from execution. Your chat interface should not be your scheduler.\n2. Treat failure as a first-class citizen. Retries, deduplication, escalation paths.\n3. Produce receipts for everything. If you cannot prove what happened, you do not have reliability. You have vibes.\n4. Make tasks idempotent so reruns are safe.\n\nThis architecture started to feel familiar: durable queues, background workers, deterministic task states, artifact pipelines. At some point it clicked. This is not a chatbot architecture. It looks much closer to a distributed system runtime for agents.\n\nThe future assistant is not one model inside one chat. It is a coordinated system with durable state, background execution, and operator oversight. Chatbots answer questions. Proactive AI systems execute work. And when you add queues, workers, artifacts, and receipts, the assistant stops looking like a chat product. It starts looking like an operating system for agents.",
+        "steps": [
+          "1. Using the post_content in this task input, extract exactly 15 slides. Map sections to these slide topics: (1) Cover/Hook: the 3:12 AM story, (2) The Problem: reactive AI waits for prompts, (3) The Contrast: email servers/build pipelines/monitoring dont wait, (4) The Shift: architecture not model size, (5) Three Layers overview, (6) OpenClaw - runtime fabric, (7) Sherbyte - human bridge, (8) Background Workers - headless executors, (9) Durable Queue + task lifecycle states, (10) Resilience: no hidden state no fragile memory, (11) The full architecture loop diagram as text, (12) A message becomes a job, (13) Overnight run example - 18 sources, (14) Four lessons from building this, (15) The reframe: OS for agents. Each slide must have: title (5-8 words), headline (one punchy sentence from the post), bullets (2-4 real points from the post, not placeholders), notes (one sentence presenter context). Use exact phrases from the post where possible. No generic text.",
+          "2. Write the slides as JSON to /home/node/workspace/results/ma-slides-v2.json: { \"version\": 2, \"title\": \"The Future of Proactive AI Systems\", \"generated_at\": \"<ISO now>\", \"slides\": [ { \"slide\": 1, \"title\": \"...\", \"headline\": \"...\", \"bullets\": [\"...\"], \"notes\": \"...\" }, ... ] }",
+          "3. Read the file back. Verify: (a) exactly 15 slides present, (b) no title contains 'Slide N' or 'Title', (c) no bullet contains 'Point A' or 'Point B' or 'Key message', (d) each slide has at least 2 bullets. If any check fails, rewrite the file correctly before proceeding.",
+          "4. Append to /home/node/workspace/notifications.json: { \"id\": \"n-slides-v2-<unix_ms>\", \"created_at\": \"<ISO>\", \"sent\": false, \"sent_at\": null, \"source\": \"background-worker\", \"task_id\": \"t-slides-v2\", \"message\": \"Slide deck v2 ready: 15 real-content slides at results/ma-slides-v2.json\" }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-slides-v2.json",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "content",
+        "explainer"
+      ]
+    },
+    {
+      "id": "t-pptx-v2",
+      "title": "Build PPTX v2 from real slide content (pptxgenjs)",
+      "priority": "high",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T11:23:27Z",
+      "created_by": "claude-code",
+      "retries": 1,
+      "max_retries": 2,
+      "run_after": "2026-03-04T11:29:55Z",
+      "depends_on": [
+        "t-slides-v2"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T11:32:47Z",
+      "error": null,
+      "input": {
+        "description": "Generate PPTX using pptxgenjs (Node.js). pip3 is not available — node only.",
+        "steps": [
+          "1. Read /home/node/workspace/results/ma-slides-v2.json and confirm it has 15 slides with real content.",
+          "2. Write the following Node.js script exactly as-is to /home/node/workspace/results/generate-pptx-v2.js:\nconst PptxGenJS = require('/home/node/workspace/node_modules/pptxgenjs');\nconst fs = require('fs');\nconst data = JSON.parse(fs.readFileSync('/home/node/workspace/results/ma-slides-v2.json', 'utf8'));\nconst pptx = new PptxGenJS();\npptx.layout = 'LAYOUT_WIDE';\npptx.title = data.title;\ndata.slides.forEach((s, i) => {\n  const slide = pptx.addSlide();\n  slide.background = { color: '0F0F19' };\n  slide.addText(s.title, { x:0.6, y:0.25, w:12.1, h:0.85, fontSize:32, bold:true, color:'FFFFFF', fontFace:'Calibri' });\n  slide.addText(s.headline, { x:0.65, y:1.15, w:12, h:0.65, fontSize:18, italic:true, color:'63B3ED', fontFace:'Calibri' });\n  const bulletObjs = (s.bullets||[]).map(b => ({\n    text: b,\n    options: { bullet: { type: 'bullet' }, fontSize: 16, color: 'DCDCDC', fontFace: 'Calibri', paraSpaceAfter: 8 }\n  }));\n  if (bulletObjs.length) slide.addText(bulletObjs, { x:0.9, y:2.0, w:11.5, h:4.6, valign:'top' });\n  slide.addText((i+1) + ' / ' + data.slides.length, { x:11.8, y:7.05, w:1.4, h:0.25, fontSize:11, color:'646478', align:'right' });\n  if (s.notes) slide.addNotes(s.notes);\n});\npptx.writeFile({ fileName: '/home/node/workspace/results/ma-explainer-v2.pptx' })\n  .then(() => { console.log('saved'); })\n  .catch(e => { console.error(e.message); process.exit(1); });\n",
+          "3. Run the script: node /home/node/workspace/results/generate-pptx-v2.js",
+          "4. Verify /home/node/workspace/results/ma-explainer-v2.pptx exists. Run: node -e \"const fs=require('fs'); const s=fs.statSync('/home/node/workspace/results/ma-explainer-v2.pptx'); console.log('size:', s.size); if(s.size < 10240) { console.error('too small'); process.exit(1); }\"",
+          "5. Append to /home/node/workspace/notifications.json: { \"id\": \"n-pptx-v2-<unix_ms>\", \"created_at\": \"<ISO>\", \"sent\": false, \"sent_at\": null, \"source\": \"background-worker\", \"task_id\": \"t-pptx-v2\", \"message\": \"PPTX v2 built with real content. File: results/ma-explainer-v2.pptx\" }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/ma-explainer-v2.pptx",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "content",
+        "explainer"
+      ]
+    },
+    {
+      "id": "t-notifications-prune",
+      "title": "Prune sent notifications older than 7 days",
+      "priority": "low",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": true,
+      "created": "2026-03-04T11:30:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": "2026-03-05T11:38:36Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T11:38:36Z",
+      "error": null,
+      "input": {
+        "description": "Prune sent notifications from notifications.json to keep it lean.",
+        "steps": [
+          "1. Read /home/node/workspace/notifications.json",
+          "2. Remove any entries where `sent: true` AND `sent_at` is older than 7 days from now. Keep all entries where `sent: false` (regardless of age) and all entries where `sent: true` but `sent_at` is within the last 7 days.",
+          "3. Write the pruned array back to /home/node/workspace/notifications.json. Preserve schema_version.",
+          "4. Append a new notification: { id: 'n-prune-<unix_ms>', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't-notifications-prune', message: '🧹 Notifications pruned: <N> old entries removed. <M> entries remain.' }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/notifications-prune-latest.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "standing",
+        "weekly",
+        "maintenance"
+      ]
+    },
+    {
+      "id": "t-queue-archive",
+      "title": "Archive completed non-recurring tasks older than 7 days",
+      "priority": "low",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": true,
+      "created": "2026-03-04T11:30:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": "2026-03-05T11:39:15Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T11:39:15Z",
+      "error": null,
+      "input": {
+        "description": "Archive stale done tasks out of queue.json to keep it small and fast.",
+        "steps": [
+          "1. Read /home/node/workspace/task-queue/queue.json",
+          "2. Identify tasks where status is 'done' AND recurring is false (or absent) AND completed_at is older than 7 days from now UTC.",
+          "3. If no such tasks exist, write output file noting 'No tasks to archive' and stop.",
+          "4. Determine archive filename: /home/node/workspace/task-queue/queue-archive-<YYYY-MM>.json using current year-month. If that file already exists, read it and append to its tasks array. If it does not exist, create it: { 'schema_version': 1, 'archived_at': '<ISO>', 'tasks': [] }.",
+          "5. Write the archive file with the identified tasks appended.",
+          "6. Re-read queue.json. Remove only the archived tasks from the tasks array. Verify: all non-archived tasks are still present. Write back to queue.json.",
+          "7. Write output to /home/node/workspace/results/queue-archive-latest.md listing archived task IDs, titles, and new queue length.",
+          "8. Append notification: { id: 'n-archive-<unix_ms>', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't-queue-archive', message: '🗂️ Queue archived: <N> tasks moved to queue-archive-<YYYY-MM>.json. Queue now has <M> tasks.' }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/queue-archive-latest.md",
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "standing",
+        "weekly",
+        "maintenance"
+      ]
+    },
+    {
+      "id": "t-mandate-v18-notify",
+      "title": "Notify: MANDATE v1.8 shipped",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T12:00:00Z",
+      "created_by": "claude-code",
+      "retries": 1,
+      "max_retries": 2,
+      "run_after": "2026-03-04T12:32:03Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T12:42:12Z",
+      "error": null,
+      "input": {
+        "description": "Send upgrade notification for MANDATE v1.8.",
+        "steps": [
+          "1. Read /home/node/workspace/agents/worker/MANDATE.md and confirm mandate_version is 1.8.",
+          "2. Append to /home/node/workspace/notifications.json: { id: 'n-v18-<unix_ms>', created_at: <ISO>, sent: false, sent_at: null, source: 'background-worker', task_id: 't-mandate-v18-notify', message: '✅ MANDATE v1.8 active.\n\nNew: hard schema validation (validate-queue.js runs on every queue.json write), escalate_after_ms enforced (pending tasks that exceed their deadline now escalate), result versioning for recurring tasks (date-stamped copies alongside latest), Sherbyte now triggers worker when pending tasks detected with no recent run, stale escalation alarm (2h unacknowledged = WhatsApp nudge).' }",
+          "3. Write completion note to /home/node/workspace/results/mandate-v18-notify.md: 'Notification sent for MANDATE v1.8 upgrade.'"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/mandate-v18-notify.md",
+      "min_output_chars": 50,
+      "escalate_after_ms": 3600000,
+      "tags": [
+        "meta",
+        "notification"
+      ]
+    },
+    {
+      "id": "t-mandate-consolidate",
+      "title": "Consolidate and trim MANDATE.md",
+      "priority": "high",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T12:45:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T12:42:12Z",
+      "error": null,
+      "min_output_chars": 500,
+      "input": {
+        "description": "Consolidate MANDATE.md — shorter = better execution fidelity.",
+        "steps": [
+          "1. Read /home/node/workspace/agents/worker/MANDATE.md. Identify: (a) rules stated in Steps AND repeated in Hard Rules, (b) verbose prose that can be made concise, (c) overlapping task type descriptions. Write analysis to /home/node/workspace/results/mandate-consolidation-analysis.md listing every identified redundancy.",
+          "2. Write the consolidated mandate to /home/node/workspace/agents/worker/MANDATE.md.proposed. Rules: preserve every functional requirement, eliminate all duplication, tighten prose to minimum viable clarity. Target: 30% line reduction. Bump version header to 1.9.",
+          "3. Write diff summary to /home/node/workspace/results/mandate-consolidation-proposal.md: list what was removed or merged and why. Append notification: { id: 'n-mandate-consolidate-<unix_ms>', created_at: <ISO>, sent: false, source: 'background-worker', task_id: 't-mandate-consolidate', message: 'MANDATE consolidation proposal ready. Review MANDATE.md.proposed vs MANDATE.md — ~30% reduction. Apply if approved.' } Then escalate: { suggested_action: 'Claude Code: diff MANDATE.md.proposed vs MANDATE.md and apply if approved', detail: 'Consolidated mandate ready for review' }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/mandate-consolidation-proposal.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "mandate",
+        "reliability",
+        "9-of-10"
+      ]
+    },
+    {
+      "id": "t-sherbyte-intake-audit",
+      "title": "Audit Sherbyte task intake flow",
+      "priority": "high",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T12:45:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T12:42:12Z",
+      "error": null,
+      "min_output_chars": 800,
+      "input": {
+        "description": "Document exactly how Sherbyte currently handles task intake before enqueuing.",
+        "steps": [
+          "1. Read /home/node/workspace/HEARTBEAT.md, /home/node/workspace/SOUL.md, /home/node/workspace/AGENTS.md, /home/node/workspace/IDENTITY.md. Document: where does !task handling occur? What logic runs between receiving a task request and writing to queue.json?",
+          "2. Read /home/node/workspace/task-queue/queue.json. Identify 3 tasks from history that had too many steps or vague descriptions — tasks that would have benefited from decomposition at intake before they reached the worker. Note their IDs and what a decomposed version would have looked like.",
+          "3. Write /home/node/workspace/results/sherbyte-intake-audit.md with sections: (a) Current intake flow — step by step, (b) Gap analysis — what decomposition logic is missing, (c) 3 real examples of tasks that should have been decomposed, (d) Proposed decomposition criteria — when Sherbyte should split a task vs. enqueue as-is."
+        ]
+      },
+      "output_path": "/home/node/workspace/results/sherbyte-intake-audit.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "sherbyte",
+        "intake",
+        "9-of-10"
+      ]
+    },
+    {
+      "id": "t-sherbyte-intake-design",
+      "title": "Design and propose Sherbyte intake decomposition",
+      "priority": "high",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T12:45:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-sherbyte-intake-audit"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T12:42:12Z",
+      "error": null,
+      "min_output_chars": 500,
+      "input": {
+        "description": "Write the proposed intake decomposition logic for Sherbyte as a HEARTBEAT.md proposed section.",
+        "steps": [
+          "1. Read /home/node/workspace/results/sherbyte-intake-audit.md and /home/node/workspace/HEARTBEAT.md.",
+          "2. Write /home/node/workspace/HEARTBEAT.md.proposed: a full copy of HEARTBEAT.md with a new section inserted — 'Task Intake Decomposition (on !task receipt)'. This section must: (a) define when to split (>1 distinct deliverable, >3 steps needed, multiple dependent artifacts), (b) describe how to split (write N tasks with depends_on chain, enqueue all, trigger worker once), (c) give a concrete example mapping a vague !task to a decomposed queue entry.",
+          "3. Write /home/node/workspace/results/sherbyte-intake-proposal.md summarising the proposed logic. Append notification and escalate: { suggested_action: 'Claude Code: review HEARTBEAT.md.proposed — task intake decomposition section ready', detail: 'Sherbyte intake decomposition logic proposed' }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/sherbyte-intake-proposal.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "sherbyte",
+        "intake",
+        "9-of-10"
+      ]
+    },
+    {
+      "id": "t-validate-schemas",
+      "title": "Write validators for notifications.json and escalations.json",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T12:45:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T12:42:13Z",
+      "error": null,
+      "min_output_chars": 300,
+      "input": {
+        "description": "Extend hard enforcement to notifications.json and escalations.json.",
+        "steps": [
+          "1. Write /home/node/workspace/tools/validate-notifications.js — validates notifications.json: is valid JSON, has schema_version, has notifications array, each entry has id/created_at/sent/message. Exit 0 on pass, exit 1 with error details on fail. Run it against current file: node /home/node/workspace/tools/validate-notifications.js",
+          "2. Write /home/node/workspace/tools/validate-escalations.js — validates escalations.json: is valid JSON, has escalations array, each entry has id/created_at/acknowledged/source/task_id/dedup_key. Exit 0 on pass, exit 1 on fail. Run it against current file: node /home/node/workspace/tools/validate-escalations.js",
+          "3. Write results to /home/node/workspace/results/schema-validators-results.md: which files passed, any errors found. Append notification: { id: 'n-validators-<unix_ms>', created_at: <ISO>, sent: false, source: 'background-worker', task_id: 't-validate-schemas', message: 'Hard validators added: validate-notifications.js + validate-escalations.js. Both running against live files.' }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/schema-validators-results.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "enforcement",
+        "reliability",
+        "9-of-10"
+      ]
+    },
+    {
+      "id": "t-validate-receipts",
+      "title": "Write validator for run receipts",
+      "priority": "normal",
+      "type": "self-improvement",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-04T12:45:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [
+        "t-validate-schemas"
+      ],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-04T12:42:13Z",
+      "error": null,
+      "min_output_chars": 300,
+      "input": {
+        "description": "Extend hard enforcement to run receipts.",
+        "steps": [
+          "1. Read the 3 most recent files in /home/node/workspace/agents/worker/runs/ to understand the receipt schema. Note all fields present.",
+          "2. Write /home/node/workspace/tools/validate-receipt.js — accepts a file path argument, validates: is valid JSON, has timestamp/mandate_version/tasks_found/tasks_completed/tasks_failed/summary fields, all numeric counts are non-negative. Exit 0 on pass, exit 1 on fail. Run it against the 3 most recent receipts.",
+          "3. Write results to /home/node/workspace/results/receipt-validator-results.md. Append notification: { id: 'n-receipt-validator-<unix_ms>', created_at: <ISO>, sent: false, source: 'background-worker', task_id: 't-validate-receipts', message: 'validate-receipt.js added. Tested against 3 recent receipts — results in receipt-validator-results.md.' }"
+        ]
+      },
+      "output_path": "/home/node/workspace/results/receipt-validator-results.md",
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "enforcement",
+        "reliability",
+        "9-of-10"
+      ]
+    },
+    {
+      "id": "t-render-explainer-video",
+      "title": "Render explainer video from script + TTS",
+      "priority": "high",
+      "type": "video",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-05T05:35:00Z",
+      "created_by": "claude-code",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-05T05:33:43Z",
+      "error": null,
+      "input": {
+        "script_path": "/home/node/workspace/results/ma-video-script.md",
+        "output_path": "/home/node/workspace/results/ma-explainer.webm",
+        "openai_api_key": null
+      },
+      "output_path": "/home/node/workspace/results/ma-explainer.webm",
+      "escalate_after_ms": 14400000,
+      "tags": [
+        "video",
+        "explainer"
+      ]
+    },
+    {
+      "id": "t-1772690541",
+      "title": "YT video concept #2: A Day in 2030 (innovative)",
+      "priority": "high",
+      "type": "research",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-05T06:02:21Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 0,
+      "max_retries": 3,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-05T06:04:44Z",
+      "error": null,
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "user-request",
+        "video",
+        "innovation",
+        "from-dm"
+      ],
+      "input": {
+        "description": "Create a 7-8 minute innovative YouTube video concept and full scene-by-scene script for: 'A Day in 2030, Powered by Invisible Agents'. Constraint: no architecture talk for first 4 minutes; emotionally compelling future scenes first, then reveal today's buildable primitives. Include hook options, scene timing, narration, visual directions, and CTA.",
+        "deliverable": "Full script markdown + 10 title options + thumbnail text ideas"
+      },
+      "output_path": "/home/node/workspace/results/t-1772690541-yt2030-script.md"
+    },
+    {
+      "id": "t-1772690542",
+      "title": "YT video concept #3: Two Founders experiment",
+      "priority": "high",
+      "type": "research",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-05T06:02:21Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 0,
+      "max_retries": 3,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-05T06:04:44Z",
+      "error": null,
+      "escalate_after_ms": 7200000,
+      "tags": [
+        "user-request",
+        "video",
+        "innovation",
+        "from-dm"
+      ],
+      "input": {
+        "description": "Create a 7-8 minute innovative YouTube video concept and full scene-by-scene script for: 'Two Founders, One Week: Reactive AI vs Autonomous AI'. Must be split-screen, data-driven, dramatic, with measurable metrics (deep work hours, tasks completed, response lag, stress level, opportunity capture). Include hook options, scene timing, narration, visual directions, and CTA.",
+        "deliverable": "Full script markdown + metric table + 10 title options + thumbnail text ideas"
+      },
+      "output_path": "/home/node/workspace/results/t-1772690542-founders-script.md"
+    },
+    {
+      "id": "t-1772690756",
+      "title": "Render full video #2: A Day in 2030",
+      "priority": "urgent",
+      "type": "video",
+      "status": "failed",
+      "recurring": false,
+      "created": "2026-03-05T06:05:56Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 2,
+      "max_retries": 2,
+      "run_after": "2026-03-05T06:09:45Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": null,
+      "error": {
+        "code": "EXECUTION_ERROR",
+        "message": "Command failed: node /home/node/workspace/agents/worker/generate-video.js '/home/node/workspace/results/t-1772690541-yt2030-script.md' '/home/node/workspace/results/yt2030-full.webm'\n❌ No scenes found. Check ## SCENE N: format.\n",
+        "retryable": true
+      },
+      "escalate_after_ms": 14400000,
+      "tags": [
+        "user-request",
+        "video",
+        "innovation",
+        "from-dm"
+      ],
+      "input": {
+        "description": "Produce full 7-8 minute video asset for concept #2 ('A Day in 2030, Powered by Invisible Agents') using /home/node/workspace/results/t-1772690541-yt2030-script.md as source. Create scene cards/slides + timing + transitions and render final video.",
+        "script_path": "/home/node/workspace/results/t-1772690541-yt2030-script.md",
+        "output_path": "/home/node/workspace/results/yt2030-full.webm",
+        "notes": "Innovative cinematic style. Prioritize originality."
+      },
+      "output_path": "/home/node/workspace/results/yt2030-full.webm"
+    },
+    {
+      "id": "t-1772690757",
+      "title": "Render full video #3: Two Founders",
+      "priority": "urgent",
+      "type": "video",
+      "status": "failed",
+      "recurring": false,
+      "created": "2026-03-05T06:05:56Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 2,
+      "max_retries": 2,
+      "run_after": "2026-03-05T06:09:53Z",
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": null,
+      "error": {
+        "code": "EXECUTION_ERROR",
+        "message": "Command failed: node /home/node/workspace/agents/worker/generate-video.js '/home/node/workspace/results/t-1772690542-founders-script.md' '/home/node/workspace/results/two-founders-full.webm'\n❌ No scenes found. Check ## SCENE N: format.\n",
+        "retryable": true
+      },
+      "escalate_after_ms": 14400000,
+      "tags": [
+        "user-request",
+        "video",
+        "innovation",
+        "from-dm"
+      ],
+      "input": {
+        "description": "Produce full 7-8 minute video asset for concept #3 ('Two Founders, One Week: Reactive vs Autonomous AI') using /home/node/workspace/results/t-1772690542-founders-script.md as source. Create split-screen visual structure + timing + transitions and render final video.",
+        "script_path": "/home/node/workspace/results/t-1772690542-founders-script.md",
+        "output_path": "/home/node/workspace/results/two-founders-full.webm",
+        "notes": "Data-driven split-screen drama."
+      },
+      "output_path": "/home/node/workspace/results/two-founders-full.webm"
+    },
+    {
+      "id": "t-1772691152",
+      "title": "Render video #2 (fixed scene format)",
+      "priority": "urgent",
+      "type": "video",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-05T06:12:32Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-05T06:13:30Z",
+      "error": null,
+      "escalate_after_ms": 14400000,
+      "tags": [
+        "user-request",
+        "video",
+        "retry-fix",
+        "from-dm"
+      ],
+      "input": {
+        "script_path": "/home/node/workspace/results/yt2030-render-script.md",
+        "output_path": "/home/node/workspace/results/yt2030-full.webm",
+        "description": "Render full video using scene-formatted script."
+      },
+      "output_path": "/home/node/workspace/results/yt2030-full.webm"
+    },
+    {
+      "id": "t-1772691153",
+      "title": "Render video #3 (fixed scene format)",
+      "priority": "urgent",
+      "type": "video",
+      "status": "done",
+      "recurring": false,
+      "created": "2026-03-05T06:12:32Z",
+      "created_by": "sherbyte:whatsapp:dm",
+      "retries": 0,
+      "max_retries": 2,
+      "run_after": null,
+      "depends_on": [],
+      "locked_at": null,
+      "owner": null,
+      "completed_at": "2026-03-05T06:14:03Z",
+      "error": null,
+      "escalate_after_ms": 14400000,
+      "tags": [
+        "user-request",
+        "video",
+        "retry-fix",
+        "from-dm"
+      ],
+      "input": {
+        "script_path": "/home/node/workspace/results/founders-render-script.md",
+        "output_path": "/home/node/workspace/results/two-founders-full.webm",
+        "description": "Render full video using scene-formatted script."
+      },
+      "output_path": "/home/node/workspace/results/two-founders-full.webm"
+    }
+  ]
+}

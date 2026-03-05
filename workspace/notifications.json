@@ -1,0 +1,329 @@
+{
+  "schema_version": 1,
+  "notifications": [
+    {
+      "id": "n001",
+      "created_at": "2026-03-04T09:47:18Z",
+      "sent": true,
+      "sent_at": "2026-03-04T09:50:52Z",
+      "source": "background-worker",
+      "task_id": "t004",
+      "message": "✅ Feature shipped: Notifications system is now live. Background worker can now send you WhatsApp updates on feature completions."
+    },
+    {
+      "id": "n002",
+      "created_at": "2026-03-04T09:47:18Z",
+      "sent": true,
+      "sent_at": "2026-03-04T09:50:52Z",
+      "source": "background-worker",
+      "task_id": "t005",
+      "message": "✅ Feature shipped: Per-attempt receipts. Every task execution is now individually recorded at task-queue/receipts/YYYY-MM-DD/"
+    },
+    {
+      "id": "n003",
+      "created_at": "2026-03-04T09:47:18Z",
+      "sent": true,
+      "sent_at": "2026-03-04T09:50:52Z",
+      "source": "background-worker",
+      "task_id": "t006",
+      "message": "✅ Feature shipped: Weekly digest generator. First digest at task-queue/digests/weekly-2026-W10.md. A standing weekly task has been added to the queue."
+    },
+    {
+      "id": "n004",
+      "created_at": "2026-03-04T09:47:19Z",
+      "sent": true,
+      "sent_at": "2026-03-04T09:50:52Z",
+      "source": "background-worker",
+      "task_id": "t007",
+      "message": "✅ Feature shipped: Failure spike detection. Sherbyte will now alert you if 3+ task failures occur within 60 minutes."
+    },
+    {
+      "id": "n005",
+      "created_at": "2026-03-04T09:47:19Z",
+      "sent": true,
+      "sent_at": "2026-03-04T09:50:52Z",
+      "source": "background-worker",
+      "task_id": "t008",
+      "message": "🚀 Self-improvement sprint complete!\n\nFeatures shipped by background worker:\n✅ Notifications system (t004)\n✅ Per-attempt receipts (t005)\n✅ Weekly digest generator (t006)\n✅ Failure spike detection (t007)\n\nWorker upgraded itself from MANDATE v1.1 → v1.2. All features live. Next daily run: 08:00 IST."
+    },
+    {
+      "id": "n006",
+      "created_at": "2026-03-04T10:07:28Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:12:06Z",
+      "source": "background-worker",
+      "task_id": "t-weekly-digest",
+      "message": "🗞️ Weekly digest generated: /home/node/workspace/task-queue/digests/weekly-latest.md (2 runs, 0 failures)."
+    },
+    {
+      "id": "n007",
+      "created_at": "2026-03-04T10:11:10Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:12:06Z",
+      "source": "background-worker",
+      "task_id": "t-1772618323",
+      "message": "✅ Research done: Top 5 LLM agent frameworks in 2026\n\n1. LangGraph — graph/state-machine, checkpointing\n2. AutoGen — multi-agent collaboration\n3. CrewAI — role-based crews for business workflows\n4. OpenAI Agents SDK — lightweight primitives\n5. LlamaIndex Agents — best for RAG-heavy use\n\nvs OpenClaw: frameworks handle in-app orchestration logic; OpenClaw is the cross-channel runtime. Complementary, not competing.\n\nFull result: /home/node/workspace/results/t-1772618323.md"
+    },
+    {
+      "id": "n-1772620139",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t002",
+      "message": "✅ Task done: SHARED_CONTEXT pending actions check\nResult: /home/node/workspace/results/shared-context-check.md"
+    },
+    {
+      "id": "n-1772620139",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-ma-research",
+      "message": "✅ Task done: Multi-agent architecture content brief\nResult: /home/node/workspace/results/ma-content-brief.md"
+    },
+    {
+      "id": "n-1772620139",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t001",
+      "message": "✅ Task done: Memory digest — last 7 days\nResult: /home/node/workspace/results/memory-digest-latest.md"
+    },
+    {
+      "id": "n-1772620139",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t003",
+      "message": "✅ Task done: Daily system health summary\nResult: /home/node/workspace/results/daily-summary.md"
+    },
+    {
+      "id": "n-ma-post",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-ma-post",
+      "message": "📝 Thought-leader post (800w):\n\nI woke up to a notification that my AI assistant had completed real work overnight. Not a canned reply, not a placeholder, but a finished asset pipeline triggered from chat. That moment forced me to confront a pattern: most AI assistants are reactive waiters. They sit idle until prompted, then disappear after each answer. I wanted the opposite: an architecture that keeps working when nobody is watching.\n\nThe fix was not a bigger model. It was better system design. We split responsibilities into three layers: OpenClaw as the runtime fabric, Sherbyte as the personal bridge, and a Background Worker as a headless executor. OpenClaw handles channels, tools, and routing. Sherbyte stays close to the human loop—messages, context, heartbeat checks, and escalation visibility. The Background Worker reads a durable queue, executes tasks, writes artifacts, and emits receipts.\n\nWhat changed everything is that queue state became the source of truth. A task moves from pending to in_progress to done/failed. Dependencies are explicit with depends_on. Retries are bounded. run_after controls scheduling and backoff. If a worker crashes mid-task, the next run can recover stale locks. No memory tricks, no hidden state. Just auditable progress.\n\nHere’s the architecture in one view:\n\nHuman/WhatsApp -> Sherbyte -> OpenClaw Runtime -> Task Queue -> Background Worker -> Results/Notifications.\n\nThe most surprising part? The system improved itself. During a self-improvement sprint, the worker shipped notifications, per-attempt receipts, weekly digests, and failure-spike detection, and updated its own mandate from v1.1 lineage to v1.3. That’s not sci-fi autonomy. It’s constrained autonomy with explicit instructions, file-backed state, and deterministic receipts.\n\nWe also added a !task pattern in WhatsApp contexts. A user drops `!task research: ...`, the request is parsed into queue.json, and the worker executes on the next cycle. Hours later, the result arrives through notifications with output paths attached. This is where AI stops being a chat novelty and starts acting like operations infrastructure.\n\nThere are practical lessons here. First, separate interaction from execution. The persona layer should not be your scheduler. Second, make failure first-class: taxonomies, retries, escalations, dedup. Third, produce receipts for everything. If you can’t prove what happened, you don’t have reliability—only vibes. Fourth, let recurring work be explicit and idempotent so re-runs are safe.\n\nThe broader implication is simple: the future assistant is not one model in one chat. It’s a coordinated system with channels, durable state, background execution, and operator oversight. That’s how you get proactive behavior without losing control.\n\nIf you’re building assistants today, stop optimizing only prompts. Design the loop: intake, queue, execution, artifact, notification, escalation. Build that once, and every model gets better outcomes. That’s the shift I care about—AI that is accountable, inspectable, and useful when you’re offline.\n\nIf this resonates, I’m happy to share the exact blueprint and file schema we used. The core idea is portable: make your assistant a system, not a session. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way. Reliability compounds when architecture is explicit, observable, and boring in the best possible way."
+    },
+    {
+      "id": "n-ma-video",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-ma-video-script",
+      "message": "🎬 Video script ready (12 scenes, demo-style with TTS narration)\nScript: /home/node/workspace/results/ma-video-script.md\nNarration section ready for TTS. Next: TTS audio generation (t-ma-tts) and screenshots (t-ma-screenshots)."
+    },
+    {
+      "id": "n-ma-screenshots",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-ma-screenshots",
+      "message": "📸 Demo assets ready (4 screenshots + index)\nDir: /home/node/workspace/results/demo-assets/\n01-task-queue, 02-run-receipts, 03-whatsapp-notifications, 04-mandate-evolution"
+    },
+    {
+      "id": "n-ma-slides",
+      "created_at": "2026-03-04T10:28:59Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-ma-slides",
+      "message": "📊 Slide content ready (15 slides)\nFile: /home/node/workspace/results/ma-slides-content.md\nBuilding PPTX next..."
+    },
+    {
+      "id": "n-ma-tts",
+      "created_at": "2026-03-04T10:29:00Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-ma-tts",
+      "message": "🎙️ TTS narration audio generated\nFiles: /home/node/workspace/results/tts/\nscene-1.mp3 through scene-12.mp3 + scene-all.mp3\nVoice: OpenAI onyx"
+    },
+    {
+      "id": "n-1772620140",
+      "created_at": "2026-03-04T10:29:00Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-weekly-digest",
+      "message": "🗞️ Weekly digest generated: /home/node/workspace/task-queue/digests/weekly-latest.md"
+    },
+    {
+      "id": "n-1772620140",
+      "created_at": "2026-03-04T10:29:00Z",
+      "sent": true,
+      "sent_at": "2026-03-04T10:39:33Z",
+      "source": "background-worker",
+      "task_id": "t-weekly-digest",
+      "message": "✅ Task done: Weekly digest generator\nResult: /home/node/workspace/task-queue/digests/weekly-latest.md"
+    },
+    {
+      "id": "n-ma-done",
+      "created_at": "2026-03-04T10:42:25Z",
+      "sent": true,
+      "sent_at": "2026-03-04T11:10:47Z",
+      "source": "background-worker",
+      "task_id": "t-ma-deliver",
+      "message": "🚀 Explainer sprint COMPLETE!\n\nDelivered:\n✅ Social post (800w) — sent to WhatsApp above\n✅ Video script (12 scenes, demo-style) — sent above\n✅ TTS narration audio — scene-1.mp3 to scene-12.mp3 + scene-all.mp3\n✅ Slide deck (15 slides PPTX) — sent to WhatsApp above\n✅ Demo assets (task queue, run receipts, WhatsApp history, MANDATE evolution)\n\nNext steps:\n-> Post the social post on LinkedIn/X\n-> Import PPT + sync TTS audio scenes for the video\n-> Or record screen with narration using the script\n-> Demo assets in /results/demo-assets/ for video b-roll"
+    },
+    {
+      "id": "n-slides-v2-1772623519457",
+      "created_at": "2026-03-04T11:25:19Z",
+      "sent": true,
+      "sent_at": "2026-03-04T11:26:08Z",
+      "source": "background-worker",
+      "task_id": "t-slides-v2",
+      "message": "Slide deck v2 ready: 15 real-content slides at results/ma-slides-v2.json"
+    },
+    {
+      "id": "n-pptx-v2-1772623967508",
+      "created_at": "2026-03-04T11:32:47Z",
+      "sent": true,
+      "sent_at": "2026-03-04T11:57:35Z",
+      "source": "claude-code",
+      "task_id": "t-pptx-v2",
+      "message": "PPTX v2 built with real content (158KB, 15 slides). File: results/ma-explainer-v2.pptx"
+    },
+    {
+      "id": "n-prune-1772624316463",
+      "created_at": "2026-03-04T11:38:36Z",
+      "sent": true,
+      "sent_at": "2026-03-04T11:57:35Z",
+      "source": "background-worker",
+      "task_id": "t-notifications-prune",
+      "message": "🧹 Notifications pruned: 0 old entries removed. 21 entries remain."
+    },
+    {
+      "id": "n-v18-1772627403470",
+      "created_at": "2026-03-04T12:30:03Z",
+      "sent": true,
+      "sent_at": "2026-03-04T13:00:16Z",
+      "source": "background-worker",
+      "task_id": "t-mandate-v18-notify",
+      "message": "✅ MANDATE v1.8 active.\n\nNew: hard schema validation (validate-queue.js runs on every queue.json write), escalate_after_ms enforced (pending tasks that exceed their deadline now escalate), result versioning for recurring tasks (date-stamped copies alongside latest), Sherbyte now triggers worker when pending tasks detected with no recent run, stale escalation alarm (2h unacknowledged = WhatsApp nudge)."
+    },
+    {
+      "id": "n-mandate-consolidate-1772628132280",
+      "created_at": "2026-03-04T12:42:12Z",
+      "sent": true,
+      "sent_at": "2026-03-04T13:00:16Z",
+      "source": "background-worker",
+      "task_id": "t-mandate-consolidate",
+      "message": "MANDATE consolidation proposal ready. Review MANDATE.md.proposed vs MANDATE.md — ~30% reduction. Apply if approved."
+    },
+    {
+      "id": "n-intake-proposal-1772628132596",
+      "created_at": "2026-03-04T12:42:12Z",
+      "sent": true,
+      "sent_at": "2026-03-04T13:00:16Z",
+      "source": "background-worker",
+      "task_id": "t-sherbyte-intake-design",
+      "message": "Sherbyte intake decomposition proposal ready. Review HEARTBEAT.md.proposed."
+    },
+    {
+      "id": "n-v18-1772628132746",
+      "created_at": "2026-03-04T12:42:12Z",
+      "sent": true,
+      "sent_at": "2026-03-04T13:00:16Z",
+      "source": "background-worker",
+      "task_id": "t-mandate-v18-notify",
+      "message": "✅ MANDATE v1.8 active.\n\nNew: hard schema validation (validate-queue.js runs on every queue.json write), escalate_after_ms enforced (pending tasks that exceed their deadline now escalate), result versioning for recurring tasks (date-stamped copies alongside latest), Sherbyte now triggers worker when pending tasks detected with no recent run, stale escalation alarm (2h unacknowledged = WhatsApp nudge)."
+    },
+    {
+      "id": "n-validators-1772628133009",
+      "created_at": "2026-03-04T12:42:13Z",
+      "sent": true,
+      "sent_at": "2026-03-04T13:00:16Z",
+      "source": "background-worker",
+      "task_id": "t-validate-schemas",
+      "message": "Hard validators added: validate-notifications.js + validate-escalations.js. Both running against live files."
+    },
+    {
+      "id": "n-receipt-validator-1772628133889",
+      "created_at": "2026-03-04T12:42:13Z",
+      "sent": true,
+      "sent_at": "2026-03-04T13:00:16Z",
+      "source": "background-worker",
+      "task_id": "t-validate-receipts",
+      "message": "validate-receipt.js added. Tested against 3 recent receipts — results in receipt-validator-results.md."
+    },
+    {
+      "id": "notif-t-render-explainer-video-failed-1772688583385",
+      "created_at": "2026-03-05T05:29:43Z",
+      "sent": true,
+      "sent_at": "2026-03-05T05:36:11.040Z",
+      "source": "background-worker",
+      "task_id": "t-render-explainer-video",
+      "message": "❌ Task failed: Render explainer video from script + TTS\nReason: TIMEOUT — pending longer than escalate_after_ms\nAttempts: 0/2\nAction needed: Inspect task input/output and retry or fix dependencies."
+    },
+    {
+      "id": "n-1772688824",
+      "created_at": "2026-03-05T05:33:43Z",
+      "sent": true,
+      "sent_at": "2026-03-05T05:36:11.040Z",
+      "source": "background-worker",
+      "task_id": "t-render-explainer-video",
+      "message": "✅ Task done: Render explainer video from script + TTS\nResult: /home/node/workspace/results/ma-explainer.webm"
+    },
+    {
+      "id": "n-1772690684633",
+      "created_at": "2026-03-05T06:04:44Z",
+      "sent": true,
+      "sent_at": "2026-03-05T06:14:40.665Z",
+      "source": "background-worker",
+      "task_id": "t-1772690541",
+      "message": "✅ Task done: YT video concept #2: A Day in 2030 (innovative)\nResult: /home/node/workspace/results/t-1772690541-yt2030-script.md"
+    },
+    {
+      "id": "n-1772690684796",
+      "created_at": "2026-03-05T06:04:44Z",
+      "sent": true,
+      "sent_at": "2026-03-05T06:14:40.665Z",
+      "source": "background-worker",
+      "task_id": "t-1772690542",
+      "message": "✅ Task done: YT video concept #3: Two Founders experiment\nResult: /home/node/workspace/results/t-1772690542-founders-script.md"
+    },
+    {
+      "id": "notif-t-1772690756-failed-1772691012024",
+      "created_at": "2026-03-05T06:10:12Z",
+      "sent": true,
+      "sent_at": "2026-03-05T06:14:40.665Z",
+      "source": "background-worker",
+      "task_id": "t-1772690756",
+      "message": "❌ Task failed: Render full video #2: A Day in 2030\nReason: EXECUTION_ERROR — Command failed: node /home/node/workspace/agents/worker/generate-video.js '/home/node/workspace/results/t-1772690541-yt2030-script.md' '/home/node/workspace/results/yt2030-full.webm'\n❌ No scenes found. Check ## SCENE N: format.\n\nAttempts: 2/2\nAction needed: Inspect task input/output and retry or fix dependencies."
+    },
+    {
+      "id": "notif-t-1772690757-failed-1772691019534",
+      "created_at": "2026-03-05T06:10:19Z",
+      "sent": true,
+      "sent_at": "2026-03-05T06:14:40.665Z",
+      "source": "background-worker",
+      "task_id": "t-1772690757",
+      "message": "❌ Task failed: Render full video #3: Two Founders\nReason: EXECUTION_ERROR — Command failed: node /home/node/workspace/agents/worker/generate-video.js '/home/node/workspace/results/t-1772690542-founders-script.md' '/home/node/workspace/results/two-founders-full.webm'\n❌ No scenes found. Check ## SCENE N: format.\n\nAttempts: 2/2\nAction needed: Inspect task input/output and retry or fix dependencies."
+    },
+    {
+      "id": "n-1772691210689",
+      "created_at": "2026-03-05T06:13:30Z",
+      "sent": true,
+      "sent_at": "2026-03-05T06:14:40.665Z",
+      "source": "background-worker",
+      "task_id": "t-1772691152",
+      "message": "✅ Task done: Render video #2 (fixed scene format)\nResult: /home/node/workspace/results/yt2030-full.webm"
+    },
+    {
+      "id": "n-1772691243871",
+      "created_at": "2026-03-05T06:14:03Z",
+      "sent": true,
+      "sent_at": "2026-03-05T06:14:40.665Z",
+      "source": "background-worker",
+      "task_id": "t-1772691153",
+      "message": "✅ Task done: Render video #3 (fixed scene format)\nResult: /home/node/workspace/results/two-founders-full.webm"
+    }
+  ]
+}

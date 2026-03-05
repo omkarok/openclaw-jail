@@ -1,0 +1,89 @@
+{
+  "schema_version": 2,
+  "escalations": [
+    {
+      "id": "esc-1772620356496",
+      "created_at": "2026-03-04T10:32:36Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-03-04T10:44:56Z",
+      "source": "background-worker",
+      "task_id": "t-ma-pptx",
+      "title": "Build explainer PPTX file",
+      "reason": "MAX_RETRIES_EXCEEDED",
+      "detail": "Task t-ma-pptx failed with MAX_RETRIES_EXCEEDED.",
+      "suggested_action": "Inspect task input/output and retry or fix dependencies.",
+      "dedup_key": "t-ma-pptx::MAX_RETRIES_EXCEEDED",
+      "resolution": "Resolved manually: pip3 unavailable in container; PPTX regenerated via pptxgenjs (Node.js). MANDATE v1.4 adds direct notification on failure."
+    },
+    {
+      "id": "esc-1772628132288",
+      "created_at": "2026-03-04T12:42:12Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-03-04T16:45:00Z",
+      "source": "background-worker",
+      "task_id": "t-mandate-consolidate",
+      "title": "Consolidate and trim MANDATE.md",
+      "reason": "REVIEW_REQUIRED",
+      "detail": "Consolidated mandate ready for review",
+      "suggested_action": "Claude Code: diff MANDATE.md.proposed vs MANDATE.md and apply if approved",
+      "dedup_key": "t-mandate-consolidate::REVIEW_REQUIRED",
+      "resolution": "Reviewed by Sherbyte: kept current MANDATE.md v1.9; proposed file appears older/less correct than active mandate."
+    },
+    {
+      "id": "esc-1772628132602",
+      "created_at": "2026-03-04T12:42:12Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-03-04T16:45:00Z",
+      "source": "background-worker",
+      "task_id": "t-sherbyte-intake-design",
+      "title": "Design and propose Sherbyte intake decomposition",
+      "reason": "REVIEW_REQUIRED",
+      "detail": "Sherbyte intake decomposition logic proposed",
+      "suggested_action": "Claude Code: review HEARTBEAT.md.proposed — task intake decomposition section ready",
+      "dedup_key": "t-sherbyte-intake-design::REVIEW_REQUIRED",
+      "resolution": "Reviewed by Sherbyte: kept current HEARTBEAT.md; proposed file has section-order issue (#Nothing before intake), so not applied."
+    },
+    {
+      "id": "esc-1772688583383-826",
+      "created_at": "2026-03-05T05:29:43Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-03-05T05:36:30Z",
+      "source": "background-worker",
+      "task_id": "t-render-explainer-video",
+      "title": "Render explainer video from script + TTS",
+      "reason": "TIMEOUT",
+      "detail": "pending longer than escalate_after_ms",
+      "suggested_action": "Inspect task input/output and retry or fix dependencies.",
+      "dedup_key": "t-render-explainer-video::TIMEOUT",
+      "resolution": "Resolved by immediate forced worker run; task completed successfully at 2026-03-05T05:34:02Z and output generated at /home/node/workspace/results/ma-explainer.webm"
+    },
+    {
+      "id": "esc-t-1772690756-1772691012022",
+      "created_at": "2026-03-05T06:10:12Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-03-05T06:28:00Z",
+      "source": "background-worker",
+      "task_id": "t-1772690756",
+      "title": "Render full video #2: A Day in 2030",
+      "reason": "EXECUTION_ERROR",
+      "detail": "Command failed: node /home/node/workspace/agents/worker/generate-video.js '/home/node/workspace/results/t-1772690541-yt2030-script.md' '/home/node/workspace/results/yt2030-full.webm'\n❌ No scenes found. Check ## SCENE N: format.\n",
+      "suggested_action": "Inspect task input/output and retry or fix dependencies.",
+      "dedup_key": "t-1772690756::EXECUTION_ERROR",
+      "resolution": "Fixed by converting script to renderer-compatible SCENE blocks and re-running as t-1772691152; output generated at /home/node/workspace/results/yt2030-full.webm"
+    },
+    {
+      "id": "esc-t-1772690757-1772691019533",
+      "created_at": "2026-03-05T06:10:19Z",
+      "acknowledged": true,
+      "acknowledged_at": "2026-03-05T06:28:00Z",
+      "source": "background-worker",
+      "task_id": "t-1772690757",
+      "title": "Render full video #3: Two Founders",
+      "reason": "EXECUTION_ERROR",
+      "detail": "Command failed: node /home/node/workspace/agents/worker/generate-video.js '/home/node/workspace/results/t-1772690542-founders-script.md' '/home/node/workspace/results/two-founders-full.webm'\n❌ No scenes found. Check ## SCENE N: format.\n",
+      "suggested_action": "Inspect task input/output and retry or fix dependencies.",
+      "dedup_key": "t-1772690757::EXECUTION_ERROR",
+      "resolution": "Fixed by converting script to renderer-compatible SCENE blocks and re-running as t-1772691153; output generated at /home/node/workspace/results/two-founders-full.webm"
+    }
+  ]
+}

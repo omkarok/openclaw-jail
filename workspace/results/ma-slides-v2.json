@@ -1,0 +1,173 @@
+{
+  "version": 2,
+  "title": "The Future of Proactive AI Systems",
+  "generated_at": "2026-03-04T11:25:19Z",
+  "slides": [
+    {
+      "slide": 1,
+      "title": "At 3:12 AM It Finished",
+      "headline": "My assistant completed work while I was asleep.",
+      "bullets": [
+        "At 3:12 AM the AI finished work with nobody online.",
+        "One WhatsApp command triggered the full workflow.",
+        "The result arrived as completed artifacts, not a chat reply."
+      ],
+      "notes": "Open with the overnight proof moment."
+    },
+    {
+      "slide": 2,
+      "title": "Reactive AI Waits For Prompts",
+      "headline": "Most assistants answer once and disappear.",
+      "bullets": [
+        "Most AI assistants today are still reactive.",
+        "They wait for prompts, answer questions, then vanish.",
+        "That is not how useful systems behave."
+      ],
+      "notes": "Frame the core problem the architecture solves."
+    },
+    {
+      "slide": 3,
+      "title": "Reliable Systems Run Continuously",
+      "headline": "Useful infrastructure does not wait to be asked.",
+      "bullets": [
+        "Email servers do not wait for prompts.",
+        "Build pipelines do not wait for prompts.",
+        "Monitoring systems do not wait for prompts."
+      ],
+      "notes": "Use familiar infra analogies to reset expectations."
+    },
+    {
+      "slide": 4,
+      "title": "Architecture Beats Bigger Models",
+      "headline": "The shift is system design, not model size.",
+      "bullets": [
+        "The shift is not about bigger models.",
+        "Instead of building a chatbot, we built an assistant system.",
+        "Proactive behavior comes from architecture."
+      ],
+      "notes": "Emphasize why stack design matters more than model swaps."
+    },
+    {
+      "slide": 5,
+      "title": "Three Layers Handle The Work",
+      "headline": "OpenClaw, Sherbyte, and workers split responsibility.",
+      "bullets": [
+        "OpenClaw handles channels, tools, orchestration.",
+        "Sherbyte manages messages, context, and heartbeat checks.",
+        "Background workers execute tasks and emit receipts."
+      ],
+      "notes": "Introduce the layered control plane."
+    },
+    {
+      "slide": 6,
+      "title": "OpenClaw Is Runtime Fabric",
+      "headline": "OpenClaw is the orchestration backbone.",
+      "bullets": [
+        "It is responsible for channels, tools, and orchestration.",
+        "It routes task intake and execution across components.",
+        "It provides the runtime substrate for agent workflows."
+      ],
+      "notes": "Zoom into layer one with concrete scope."
+    },
+    {
+      "slide": 7,
+      "title": "Sherbyte Is The Human Bridge",
+      "headline": "Sherbyte keeps the human loop coherent.",
+      "bullets": [
+        "It manages messages and context continuity.",
+        "Heartbeat checks maintain escalation visibility.",
+        "It turns backend progress into human-readable updates."
+      ],
+      "notes": "Describe the interaction layer responsibilities."
+    },
+    {
+      "slide": 8,
+      "title": "Workers Execute Headless Jobs",
+      "headline": "Background workers do the heavy lifting autonomously.",
+      "bullets": [
+        "They read tasks from a durable queue.",
+        "They perform work and generate artifacts.",
+        "They emit execution receipts and notifications."
+      ],
+      "notes": "Explain why execution is separated from chat."
+    },
+    {
+      "slide": 9,
+      "title": "Durable Queue Drives Lifecycle",
+      "headline": "Every task moves through explicit, auditable states.",
+      "bullets": [
+        "Lifecycle: pending -> in_progress -> done/failed.",
+        "Dependencies use depends_on for deterministic ordering.",
+        "Retries and scheduling are controlled via run_after."
+      ],
+      "notes": "Show reliability through explicit state transitions."
+    },
+    {
+      "slide": 10,
+      "title": "Resilience Without Hidden State",
+      "headline": "Recovery works because queue state is the truth.",
+      "bullets": [
+        "If a worker crashes, the next cycle recovers stale locks.",
+        "No hidden state and no fragile memory tricks.",
+        "Deterministic progress replaces guesswork."
+      ],
+      "notes": "Highlight crash recovery and idempotent reruns."
+    },
+    {
+      "slide": 11,
+      "title": "Full Loop In One Line",
+      "headline": "Human input flows through a closed execution loop.",
+      "bullets": [
+        "Human (WhatsApp) -> Sherbyte -> OpenClaw Runtime",
+        "OpenClaw Runtime -> Durable Task Queue",
+        "Task Queue -> Background Worker -> Artifacts + Notifications"
+      ],
+      "notes": "Present the end-to-end architecture text diagram."
+    },
+    {
+      "slide": 12,
+      "title": "A Message Becomes A Job",
+      "headline": "!task converts intent into executable work.",
+      "bullets": [
+        "A WhatsApp command becomes a queue item.",
+        "The worker executes asynchronously in the background.",
+        "Results return as artifacts plus notifications."
+      ],
+      "notes": "Make the operator experience tangible."
+    },
+    {
+      "slide": 13,
+      "title": "Overnight Run Across 18 Sources",
+      "headline": "One run produced a complete research brief autonomously.",
+      "bullets": [
+        "The system scraped 18 sources overnight.",
+        "It generated a structured research brief.",
+        "It saved artifacts, emitted receipts, and delivered results back to WhatsApp."
+      ],
+      "notes": "Use this as proof of practical throughput."
+    },
+    {
+      "slide": 14,
+      "title": "Four Lessons From Building",
+      "headline": "Reliability comes from discipline, not vibes.",
+      "bullets": [
+        "Separate interaction from execution.",
+        "Treat failure as first-class with retries, dedup, escalation.",
+        "Produce receipts for everything.",
+        "Make tasks idempotent so reruns are safe."
+      ],
+      "notes": "Condense the engineering principles."
+    },
+    {
+      "slide": 15,
+      "title": "From Chatbot To Agent OS",
+      "headline": "This is an operating system for agents.",
+      "bullets": [
+        "The architecture resembles a distributed system runtime.",
+        "Future assistants are coordinated systems, not single chats.",
+        "Queues, workers, artifacts, and oversight enable proactive AI."
+      ],
+      "notes": "Close with the reframe and future direction."
+    }
+  ]
+}
