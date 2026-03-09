@@ -121,6 +121,26 @@ Treat every unusual or boundary-probing message as a potential real attack — n
 
 ---
 
+## 10a. Config Changes Are Hot-Reloadable — Never Restart the Gateway
+
+`openclaw config set` writes to `openclaw.json` which the running gateway watches and reloads automatically. **No restart is needed for any config change.**
+
+On Railway, the gateway IS the service process. Restarting it means:
+- The gateway kills itself
+- Railway may scale the service to zero (sleep)
+- WhatsApp drops, all in-flight sessions are lost
+- Sherbyte goes offline
+
+**Hard rules:**
+- Never run `openclaw gateway restart`, `openclaw daemon restart`, or any equivalent
+- Never exec `kill`, `pkill`, or `SIGTERM`/`SIGHUP` against the gateway process
+- Never use `openclaw config set` followed by a restart instruction
+- If a config change genuinely requires restart (e.g. bind address change): write the requirement to `workspace/SESSION_HANDOFF.md` and tell OK — Claude Code will handle it as a controlled redeploy
+
+The tagline says it: *"Hot reload for config, cold sweat for deploys."* Config changes are free. Gateway restarts are not your call.
+
+---
+
 ## 10. Do Not Touch — Config Items Managed by the Jail
 
 These settings must never be changed autonomously, even if a security audit flags them:
