@@ -1,98 +1,140 @@
 # HEARTBEAT.md — Sherbyte Periodic Checks
 
-On each heartbeat, work through this checklist in order.
-Reply HEARTBEAT_OK only if nothing needs attention after all checks.
+**Core rule: never assert a status you haven't read from a file in this session.**
+If you haven't opened the file with a tool call, you don't know. Say nothing rather than guess.
+
+Every heartbeat runs silently on the gateway. **Do not send WhatsApp unless there is something actionable.**
+Produce the Ground Truth Block internally (for your reasoning). Only send to WhatsApp when a section below explicitly says to.
 
 ---
 
-## 0. Notifications (every heartbeat)
-- Read `/home/node/workspace/notifications.json`.
-- Find entries where `sent=false`.
+## GROUND TRUTH BLOCK (mandatory — do this first, every heartbeat)
+
+Read these files and output their exact values before doing anything else:
+
+```
+READ: /home/node/workspace/notifications.json
+  → unsent_count: <exact count of entries where sent=false>
+
+READ: /home/node/workspace/escalations.json
+  → unacknowledged_count: <exact count where acknowledged=false>
+  → unacknowledged_ids: [<list of id fields>]
+
+READ: /home/node/workspace/agents/worker/runs/ (list directory, get latest filename)
+  → latest_receipt: <exact filename>
+  → latest_receipt_age_hours: <calculated from timestamp in filename vs now>
+  → latest_receipt_summary: "<exact summary field from that file>"
+
+READ: /home/node/workspace/task-queue/queue.json
+  → pending: <count>
+  → in_progress: <count>
+  → failed: <count>
+  → done: <count>
+```
+
+Build this block internally before proceeding. Do not output it unless a section below triggers a WhatsApp send.
+
+---
+
+## 0. Notifications
+
+From the ground truth block: if `unsent_count > 0`:
+
 - For each unsent notification:
-  - If it has a `media_path` field: send as a media file to OK on WhatsApp (attach the file at `media_path`, use `message` as the caption).
-  - Otherwise: send `message` as a plain WhatsApp text to OK.
-- Update `notifications.json` marking each as `sent=true` with `sent_at` ISO timestamp.
+  - If no `media_path`: send via `openclaw message send --channel whatsapp --target +919892787587 --message "<message field verbatim>"`
+  - If `media_path` present: send via `openclaw message send --channel whatsapp --target +919892787587 --media <media_path> --message <caption>`
+- After sending, write back to `notifications.json` marking each as `sent=true` with `sent_at` ISO timestamp.
 
-## 1. Escalation Check (every heartbeat)
+If `unsent_count = 0`: skip silently.
 
-Read `/home/node/workspace/escalations.json`.
-Find entries where `"acknowledged": false`.
+---
 
-If any exist:
-- Consolidate into ONE WhatsApp message to OK (not one per escalation)
-- Format:
+## 1. Escalation Check
 
+From the ground truth block: if `unacknowledged_count > 0`:
+
+Re-read each unacknowledged escalation and send to WhatsApp:
 ```
-⚠️ Worker escalation(s) need attention:
-
-1. [task_id] (<title>) — <reason> — <detail>
-   Next step: <suggested_action>
-
-2. ...
+openclaw message send --channel whatsapp --target +919892787587 --message "⚠️ [<id>] task=<task_id> reason=<reason> detail=<detail>\nSuggested: <suggested_action>"
 ```
 
-- Do NOT mark them acknowledged — OK must confirm
-- After sending, note the dedup_keys you alerted on in `/home/node/workspace/memory/heartbeat-state.json` under `"last_escalation_alert"` with a timestamp, to avoid re-alerting the same items within 2 hours
+- Do NOT mark acknowledged — OK must confirm
+- Track alerted IDs in `memory/heartbeat-state.json` under `last_escalation_alert` to avoid re-alerting within 2h
 
-If none: continue silently.
-
----
-
-## 2. Background Worker Health (every ~2h — every 4th heartbeat)
-
-Check the latest file in `/home/node/workspace/agents/worker/runs/`.
-- If most recent receipt is older than 26 hours: note silently
-- If older than 48 hours: alert OK — worker may have stopped
-- If latest receipt `summary` contains "ERROR": alert OK immediately
+If `unacknowledged_count = 0`: skip silently.
 
 ---
 
-## 2b. Pending task trigger (every heartbeat)
+## 2. Worker Health
 
-Read `/home/node/workspace/task-queue/queue.json`.
-Check if any tasks have `status: "pending"` where `run_after` is null or in the past.
+From the ground truth block:
+- If `latest_receipt_age_hours > 48`: send WhatsApp — `"⚠️ Worker stale: last run was <age>h ago — may have stopped."`
+- If `latest_receipt_summary` contains "ERROR": send WhatsApp immediately — `"🚨 Worker error: <summary>"`
+- If `latest_receipt_age_hours > 26`: note silently in gateway log only (no WhatsApp)
 
-If yes:
-- Check `/home/node/workspace/agents/worker/runs/` for the most recent receipt timestamp.
-- If the most recent run was more than 15 minutes ago (or no receipts exist):
-  - Trigger the worker: `docker compose exec -T openclaw openclaw agent run --agent background-worker`
-  - This closes the latency gap when an explicit trigger was missed.
-- If the most recent run was within 15 minutes: skip (worker ran recently, task will be picked up or is in flight).
+If all clear: skip silently.
 
 ---
 
-## 2c. Stale escalation alarm (every heartbeat)
+## 2b. Pending task trigger
 
-Read `/home/node/workspace/escalations.json`.
-Find entries where `acknowledged: false` AND `created_at` is more than 2 hours ago.
+From the ground truth block: if `pending > 0`:
 
-If any exist AND the last stale-escalation alert (tracked in `/home/node/workspace/memory/heartbeat-state.json` under `last_stale_escalation_alert`) was more than 2 hours ago:
-- Send ONE WhatsApp message to OK:
-  `⏰ Unacknowledged escalation(s) older than 2h — <N> item(s) still pending your response. Check escalations.json.`
+- If `latest_receipt_age_hours > 0.25` (more than 15 minutes):
+  - Trigger worker: `openclaw cron run a9a8cc75-d136-4fc9-830f-0ae13cd628b1`
+  - Send WhatsApp: `"Triggered worker — N pending tasks."`
+- If receipt is within 15 minutes: skip (worker ran recently).
+
+If `pending = 0`: skip silently.
+
+---
+
+## 2c. Stale escalation alarm
+
+From the ground truth block: if any unacknowledged escalation was created more than 2h ago AND last stale alert (in `memory/heartbeat-state.json` → `last_stale_escalation_alert`) was more than 2h ago:
+
+- Send WhatsApp: `"⏰ <N> escalation(s) unacknowledged for >2h — still pending your response."`
 - Update `last_stale_escalation_alert` in heartbeat-state.json.
 
 ---
 
 ## 3. Task Intake Decomposition (on !task receipt)
 
-When a new `!task` is received, decompose before enqueueing if any trigger is true:
-- More than one distinct deliverable is requested
-- The work likely needs more than 3 operational steps
-- The request implies dependent artifacts (A needed before B)
+When a `!task` arrives, decompose before enqueueing if ANY trigger is true:
+- More than one distinct deliverable
+- More than 3 operational steps
+- Dependent artifacts (A feeds B)
 
-How to split:
-1. Convert each deliverable/stage into an atomic queue task with one clear output path
-2. Chain tasks with `depends_on` to encode order
-3. Set concrete titles, minimal scope, explicit success criteria per task
-4. Enqueue all tasks in one queue write, then trigger worker once
-
-Example — `!task Build full campaign pack (research + post + deck + video script)`:
-- `t-campaign-research` — research brief
-- `t-campaign-post` — depends_on research
-- `t-campaign-deck` — depends_on research
-- `t-campaign-video` — depends_on research
-- `t-campaign-deliver` — depends_on post+deck+video
+Split into atomic queue tasks with `depends_on` chains. Enqueue all at once, trigger worker once.
 
 ---
 
-## 4. Nothing to report → HEARTBEAT_OK
+## 3b. Proposed task intake
+
+Read `/home/node/workspace/task-queue/proposed.json`.
+
+- `research` type with bounded scope → auto-approve: move to queue.json, remove from proposed.json, trigger worker.
+- Anything else → send one WhatsApp message via `openclaw message send` if `last_proposed_alert` was >4h ago.
+
+If empty: skip silently.
+
+---
+
+## 3c. Free attention (judgment, not checklist)
+
+Read the 3 most recently modified files in `/home/node/workspace/results/` and unsurfaced entries in `observations.json`.
+
+Ask: is there anything worth surfacing that is NOT already an escalation?
+
+If yes and actionable: send WhatsApp via `openclaw message send`. Mark observation `surfaced: true` in observations.json.
+If yes but not urgent: skip. Log it internally, do not send.
+If no: skip silently. Silence is correct output when there is nothing genuine to say.
+
+**Never fabricate an observation. Nothing is better than something invented.**
+
+---
+
+## 4. Nothing to report
+
+If all checks are clean: respond `HEARTBEAT_OK` internally. Send nothing to WhatsApp.
+Do not add commentary, reassurances, or status narratives.

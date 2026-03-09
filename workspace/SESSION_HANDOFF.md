@@ -31,21 +31,15 @@ Next action: <one concrete thing, who does it>
 
 ## Active Threads
 
-## Content engine publishing decisions (explainer sprint outputs)
-Last updated: 2026-03-05T05:35:00Z by sherbyte
-Phase: execution
-Open questions:
-- Which asset should be shipped first: social post, PPTX v2, or narrated video cut?
-- Preferred publish order and channel mix (LinkedIn/X/WhatsApp-first dry run)
-Decided:
-- Asset pack exists and is complete enough to ship: social post, 15-slide PPTX v2, video script, TTS scenes, demo assets
-- Delivery pipeline and notification loop are operational; this is now an operator-choice bottleneck, not a build bottleneck
-Next action: OK — choose first publish target + channel order; Sherbyte executes immediately
+_(none)_
 
 ---
 
 ## Resolved Log
 
-- 2026-03-05T05:35:00Z — **Cognitive alignment + agent architecture** moved to resolved: shared cognitive model + cross-agent handoff bridge established, no open questions.
+- 2026-03-05T05:35:00Z — **Cognitive alignment + agent architecture** — shared cognitive model + cross-agent handoff bridge established.
+- 2026-03-05T12:30:00Z — **Content engine publishing decisions** — deferred by OK, assets remain in results/ when ready to ship.
+- 2026-03-05T12:30:00Z — **Notification pipeline** — fixed: heartbeat cron registered (every 30m), announce delivery to WhatsApp, §0 rewritten to format-not-toolcall.
+- 2026-03-05T12:30:00Z — **Creativity lane** — MANDATE v2.0 §5c + HEARTBEAT §3b/§3c live. observations.json + proposed.json created.
 
 _Completed threads are moved here with a one-line summary._

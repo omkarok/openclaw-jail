@@ -1,0 +1,32 @@
+FROM node:22.22.0-bookworm
+
+ARG OPENCLAW_VERSION=2026.3.2
+ARG PLAYWRIGHT_VERSION=1.58.2
+
+# Install openclaw globally (read-only FS safe — binary in /usr/local/bin)
+RUN corepack enable && npm install -g openclaw@${OPENCLAW_VERSION}
+
+# Install Playwright OS-level deps
+RUN npm install -g playwright@${PLAYWRIGHT_VERSION} --ignore-scripts && \
+    playwright install-deps chromium
+
+# Bake Chromium binary into the image (avoids runtime download on cold start)
+# PLAYWRIGHT_BROWSERS_PATH overrides ~/.cache/ms-playwright so the browser
+# lives in the image layer, not on the volume.
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/ms-playwright
+RUN npx playwright@${PLAYWRIGHT_VERSION} install chromium
+
+# Create log and script directories (root-owned in image layer, fine since
+# entrypoint chowns /var/log/openclaw to node at runtime)
+RUN mkdir -p /var/log/openclaw /opt/openclaw-scripts
+
+# Copy startup scripts into image (not on volume — always present after deploy)
+COPY scripts/railway-entrypoint.sh /railway-entrypoint.sh
+COPY scripts/railway-start.sh /opt/openclaw-scripts/start.sh
+RUN chmod +x /railway-entrypoint.sh /opt/openclaw-scripts/start.sh
+
+WORKDIR /home/node
+
+# Entrypoint runs as root to fix volume permissions, then drops to node (uid 1000)
+ENTRYPOINT ["/railway-entrypoint.sh"]
+CMD ["/opt/openclaw-scripts/start.sh"]

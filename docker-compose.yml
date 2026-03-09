@@ -28,6 +28,11 @@ services:
       # This mount overrides the Windows bind mount for this specific subdirectory.
       - openclaw-sessions:/home/node/.openclaw/.openclaw/agents/main/sessions:rw
 
+      # Named volume for agent auth directory — WSL2 ext4 ensures token writes are
+      # atomic and survive Docker restarts without refresh_token_reused errors.
+      # Windows bind mounts can fail to flush in-flight writes when Docker is killed.
+      - openclaw-auth:/home/node/.openclaw/.openclaw/agents/main/agent:rw
+
     ports:
       # Localhost only — OpenClaw gateway (WebSocket + WebChat UI)
       - "127.0.0.1:18789:18789"
@@ -73,6 +78,10 @@ services:
         soft: 65536
         hard: 65536
 
+    # Give openclaw 30s on graceful shutdown to flush in-flight token writes to disk.
+    # Default is 10s — too short if token refresh is in progress when Docker stops.
+    stop_grace_period: 30s
+
     command: >
       bash -lc "
         echo '[preflight] Verifying egress policy (metadata endpoint check)...';
@@ -84,7 +93,11 @@ services:
         else
           echo '[preflight] OK: Metadata endpoint blocked — egress policy confirmed active.';
         fi;
-        openclaw gateway --port 18789 --verbose 2>&1 | tee /var/log/openclaw/gateway.log
+        openclaw node run --display-name container-node 2>&1 | tee /var/log/openclaw/node.log &
+        NODE_PID=$!;
+        echo '[node] Node host started (PID '$NODE_PID')';
+        openclaw gateway --port 18789 --verbose 2>&1 | tee /var/log/openclaw/gateway.log;
+        kill $NODE_PID 2>/dev/null
       "
 
 volumes:
@@ -94,3 +107,9 @@ volumes:
   openclaw-sessions:
     external: true
     name: openclaw-jail_openclaw-sessions
+
+  # Docker-managed volume for agent auth (auth.json, auth-profiles.json).
+  # Isolates token writes to WSL2 ext4 — avoids refresh_token_reused on restart.
+  openclaw-auth:
+    external: true
+    name: openclaw-jail_openclaw-auth

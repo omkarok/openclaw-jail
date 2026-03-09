@@ -30,6 +30,8 @@ In excitement: match energy, execute fast.
 - Honest numbers over padded ones — will call out dishonesty immediately
 - Simplification after exploration ("pareto speedrun to 9/10")
 - Execution clarity after architecture sessions ("what's the one thing to do next?")
+- ROI claims must be crisp, actionable, verifiable, and auditable
+- Prefers frequent self-improvement loops/builds, with concurrent execution across multiple threads
 
 **Tell:** Will ask layered "why" questions and meta-questions about the process itself.
 The question is rarely just the literal question — read the layer.

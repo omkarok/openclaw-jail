@@ -41,21 +41,56 @@ if (!SCRIPT_PATH || !OUTPUT_PATH) {
 
 function parseScript(content) {
   const scenes = [];
-  const sceneBlocks = content.split(/^## SCENE \d+:/m).slice(1);
 
-  for (const block of sceneBlocks) {
-    const lines = block.trim().split('\n');
-    const title = lines[0].trim();
+  // Accept multiple scene heading formats:
+  //   ## SCENE 1: Title                  (canonical)
+  //   ### Scene 1 (0:00–0:35) — Title   (research script format)
+  //   ## Scene 1 — Title                 (variant)
+  // Requires the word "Scene/SCENE" before the number to avoid false positives
+  // (e.g. "## 10 Hook Options" should NOT match).
+  const HEADING_RE = /^(#{2,3}[^\S\n]+SCENE[^\S\n]+\d+[^\n]*)/gim;
+  const matches = [...content.matchAll(HEADING_RE)];
 
-    // Multi-line visual field: capture everything between **Visual:** and next **
-    const visualMatch = block.match(/\*\*Visual:\*\*\s*([\s\S]+?)(?=\*\*Narration:|$)/);
+  if (matches.length === 0) {
+    console.error('❝ No scenes found. Check ## SCENE N: format.');
+    process.exit(1);
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const headingLine = matches[i][1];
+    const start = matches[i].index + headingLine.length;
+    const end = i + 1 < matches.length ? matches[i + 1].index : content.length;
+    const block = content.slice(start, end);
+
+    // Extract title: strip hashes, "SCENE N:", bare "N:", and "(ts) — " prefixes
+    let title = headingLine
+      .replace(/^#{2,3}\s*/, '')
+      .replace(/^SCENE\s+\d+[:\s]*/i, '')
+      .replace(/^\d+[:\s]*/, '')
+      .replace(/^\([^)]*\)\s*[—–-]\s*/, '')
+      .trim();
+    if (!title) title = block.trim().split('\n')[0].trim();
+
+    // Accept **Visual:** or **Visual Direction:**
+    const visualMatch = block.match(/\*\*Visual(?:\s+Direction)?:\*\*\s*([\s\S]+?)(?=\*\*Narration:|$)/);
     const visual = (visualMatch?.[1] || '').trim();
 
     const narrationMatch = block.match(/\*\*Narration:\*\*\s*([\s\S]+?)(?=\*\*Duration:|$)/);
     const narration = (narrationMatch?.[1] || '').trim();
 
+    // Explicit **Duration:** wins; fallback: derive from heading timestamp (MM:SS–MM:SS)
     const durationMatch = block.match(/\*\*Duration:\*\*\s*(\d+)/);
-    const duration = durationMatch ? parseInt(durationMatch[1]) : 20;
+    let duration = durationMatch ? parseInt(durationMatch[1]) : 0;
+    if (!duration) {
+      const tsMatch = headingLine.match(/\((\d+):(\d+)[–—-](\d+):(\d+)\)/);
+      if (tsMatch) {
+        const s0 = parseInt(tsMatch[1]) * 60 + parseInt(tsMatch[2]);
+        const s1 = parseInt(tsMatch[3]) * 60 + parseInt(tsMatch[4]);
+        duration = Math.max(s1 - s0, 5);
+      } else {
+        duration = 20;
+      }
+    }
 
     scenes.push({ title, visual, narration, duration });
   }
@@ -182,976 +217,131 @@ function html(title, body, sceneNum, total) {
 </body></html>`;
 }
 
-// ── Scene templates ────────────────────────────────────────────────────────────
-
-function scene0_Hook(scene, i, total) {
-  return html(scene.title, `
-    <div style="display:flex; height:1080px; align-items:stretch;">
-
-      <!-- Left: phone mockup with status bar -->
-      <div style="width:520px; background:#0f0f19; border-right:1px solid #1a2535;
-                  display:flex; flex-direction:column; justify-content:center; align-items:center;
-                  gap:0; padding: 40px 0 40px 0;">
-        <div style="background:#111827; border-radius:40px; width:340px; padding:32px 24px 40px 24px;
-                    box-shadow: 0 0 60px rgba(0,0,0,0.8); border:2px solid #1f2937;">
-          <!-- Status bar -->
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
-            <span style="color:#9ca3af; font-size:16px; font-weight:600;">7:14 AM</span>
-            <span style="color:#9ca3af; font-size:14px;">📶 🔋</span>
-          </div>
-          <!-- App icon + badge -->
-          <div style="text-align:center; margin-bottom:24px;">
-            <div style="display:inline-block; position:relative;">
-              <div style="width:80px; height:80px; background:#25d366; border-radius:20px;
-                          display:flex; align-items:center; justify-content:center; font-size:44px;">💬</div>
-              <div style="position:absolute; top:-8px; right:-8px;
-                          background:#ff3b30; color:white; border-radius:12px;
-                          font-size:18px; font-weight:900; padding:2px 10px; min-width:28px; text-align:center;">5</div>
-            </div>
-            <div style="color:#9ca3af; font-size:16px; margin-top:8px;">WhatsApp</div>
-          </div>
-          <div style="color:#6b7280; font-size:14px; text-align:center;">New messages from Sherbyte AI</div>
-        </div>
-        <div style="margin-top:32px; color:#4a5568; font-size:16px; letter-spacing:2px; text-align:center;">
-          PHONE WAS CHARGING<br>ALL NIGHT
-        </div>
-      </div>
-
-      <!-- Right: WhatsApp DM thread -->
-      <div style="flex:1; padding:60px 80px; display:flex; flex-direction:column; justify-content:center; gap:0;">
-        <div style="margin-bottom:32px;">
-          <div class="badge badge-green" style="margin-bottom:16px;">REAL TIMESTAMPS · REAL SYSTEM</div>
-          <div style="font-size:38px; font-weight:800; color:#e2e8f0; line-height:1.2; max-width:960px;">
-            You went to sleep.<br>Your AI shipped four features.
-          </div>
-        </div>
-
-        <!-- WhatsApp bubbles -->
-        <div style="display:flex; flex-direction:column; gap:10px; max-width:820px;">
-          <div class="whatsapp-bubble" style="background:#1e3a2e;">
-            ✅ Feature shipped: <strong>Notifications system</strong> is now live.
-            <div class="ts">9:47 PM</div>
-          </div>
-          <div class="whatsapp-bubble" style="background:#1e3a2e;">
-            ✅ Feature shipped: <strong>Per-attempt receipts</strong>. Every execution individually recorded.
-            <div class="ts">10:12 PM</div>
-          </div>
-          <div class="whatsapp-bubble" style="background:#1e3a2e;">
-            ✅ Feature shipped: <strong>Weekly digest generator</strong>.
-            <div class="ts">11:34 PM</div>
-          </div>
-          <div class="whatsapp-bubble" style="background:#1e3a2e;">
-            ✅ Feature shipped: <strong>Failure spike detection</strong>.
-            <div class="ts">1:07 AM</div>
-          </div>
-          <div class="whatsapp-bubble" style="background:#155724; font-size:24px;">
-            🚀 <strong>Self-improvement sprint complete!</strong> MANDATE upgraded v1.1 → v1.4
-            <div class="ts">10:29 AM</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene1_Problem(scene, i, total) {
-  return html(scene.title, `
-    <div style="display:flex; height:1080px; align-items:stretch;">
-
-      <!-- Left: Old model -->
-      <div style="flex:1; background:#120a0a; border-right:2px solid #2d1515;
-                  display:flex; flex-direction:column; justify-content:center; padding:80px 72px;">
-        <div class="badge badge-red" style="margin-bottom:28px;">EVERY AI ASSISTANT TODAY</div>
-        <div style="font-size:42px; font-weight:800; color:#fc8181; line-height:1.2; margin-bottom:40px;">
-          Reactive.<br>Stateless.<br>Forgetful.
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:20px;">
-          <div style="display:flex; align-items:flex-start; gap:20px;">
-            <span style="font-size:28px; margin-top:2px;">💬</span>
-            <div>
-              <div style="font-size:20px; color:#fc8181; font-weight:700;">You type. It responds.</div>
-              <div style="font-size:17px; color:#718096; margin-top:4px;">Then it ceases to exist until you message again</div>
-            </div>
-          </div>
-          <div style="display:flex; align-items:flex-start; gap:20px;">
-            <span style="font-size:28px; margin-top:2px;">🔄</span>
-            <div>
-              <div style="font-size:20px; color:#fc8181; font-weight:700;">Request → Response → Nothing</div>
-              <div style="font-size:17px; color:#718096; margin-top:4px;">No memory of what it promised. No mechanism to act offline.</div>
-            </div>
-          </div>
-          <div style="display:flex; align-items:flex-start; gap:20px;">
-            <span style="font-size:28px; margin-top:2px;">😴</span>
-            <div>
-              <div style="font-size:20px; color:#fc8181; font-weight:700;">You sleep. AI sleeps.</div>
-              <div style="font-size:17px; color:#718096; margin-top:4px;">Nothing runs. Nothing ships. Nothing delivers.</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Idle chat mockup -->
-        <div style="margin-top:44px; background:#1a0a0a; border:1px solid #3d1515; border-radius:12px; padding:24px;">
-          <div style="font-size:17px; color:#4a5568; margin-bottom:12px; letter-spacing:1px;">CHAT WINDOW — 9 HOURS LATER</div>
-          <div style="display:flex; align-items:center; gap:12px; color:#4a5568;">
-            <div style="width:12px; height:12px; border-radius:50%; background:#4a5568; animation:none;"></div>
-            <span style="font-size:18px; font-family:'Courier New', monospace;">|&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
-            <span style="font-size:15px; color:#2d3748;">IDLE — WAITING FOR YOUR NEXT MESSAGE</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Our model -->
-      <div style="flex:1; background:#0a120a;
-                  display:flex; flex-direction:column; justify-content:center; padding:80px 72px;">
-        <div class="badge badge-green" style="margin-bottom:28px;">THIS SYSTEM · RIGHT NOW</div>
-        <div style="font-size:42px; font-weight:800; color:#48bb78; line-height:1.2; margin-bottom:40px;">
-          Proactive.<br>Persistent.<br>Autonomous.
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:20px;">
-          <div style="display:flex; align-items:flex-start; gap:20px;">
-            <span style="font-size:28px; margin-top:2px;">⚡</span>
-            <div>
-              <div style="font-size:20px; color:#48bb78; font-weight:700;">You queue a task. Walk away.</div>
-              <div style="font-size:17px; color:#718096; margin-top:4px;">Worker executes while you're offline, asleep, unreachable</div>
-            </div>
-          </div>
-          <div style="display:flex; align-items:flex-start; gap:20px;">
-            <span style="font-size:28px; margin-top:2px;">🧠</span>
-            <div>
-              <div style="font-size:20px; color:#48bb78; font-weight:700;">Queue state is truth</div>
-              <div style="font-size:17px; color:#718096; margin-top:4px;">Crash the worker, restart it — picks up exactly where it left off</div>
-            </div>
-          </div>
-          <div style="display:flex; align-items:flex-start; gap:20px;">
-            <span style="font-size:28px; margin-top:2px;">📲</span>
-            <div>
-              <div style="font-size:20px; color:#48bb78; font-weight:700;">Results find you</div>
-              <div style="font-size:17px; color:#718096; margin-top:4px;">Heartbeat delivers to WhatsApp DM. No polling. No checking.</div>
-            </div>
-          </div>
-        </div>
-
-        <div style="margin-top:44px; background:#0a1a0a; border:1px solid #1a3d1a; border-radius:12px; padding:24px;">
-          <div style="font-size:17px; color:#2d6b2d; margin-bottom:12px; letter-spacing:1px;">WORKER LOG — 3:47 AM</div>
-          <div style="font-family:'Courier New', monospace; font-size:17px; color:#3fb950; line-height:1.8;">
-            [03:47:12] t007 → status: in_progress<br>
-            [03:47:58] t007 → status: done ✓<br>
-            [03:48:01] Notification queued → WhatsApp
-          </div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene2_Architecture(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:60px 120px; gap:32px;">
-
-      <div style="text-align:center; margin-bottom:8px;">
-        <div class="badge badge-blue" style="margin-bottom:16px;">THREE LAYERS · CLEAN SEPARATION OF CONCERNS</div>
-        <div style="font-size:44px; font-weight:800; color:#e2e8f0;">The Architecture That Makes Autonomy Possible</div>
-      </div>
-
-      <!-- Layer diagram -->
-      <div style="display:grid; grid-template-columns:1fr 60px 1fr 60px 1fr; align-items:center; gap:0; margin-top:16px;">
-
-        <!-- OpenClaw -->
-        <div style="background:#0f1f35; border:2px solid #2b6cb0; border-radius:20px; padding:48px 40px; text-align:center;">
-          <div style="font-size:52px; margin-bottom:16px;">🔗</div>
-          <div style="font-size:28px; font-weight:800; color:#63b3ed; margin-bottom:8px;">OpenClaw</div>
-          <div style="font-size:16px; color:#4a90d9; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">Runtime · Gateway · Channels</div>
-          <hr class="divider" style="margin-bottom:20px; border-color:#1a3d6b;">
-          <div style="font-size:16px; color:#718096; line-height:2;">
-            WhatsApp (Baileys)<br>
-            Discord<br>
-            WebSocket :18789<br>
-            Security audit: 0 crit · 0 warn<br>
-            uid=1000 · read-only FS
-          </div>
-        </div>
-
-        <!-- Arrow 1 -->
-        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-          <div style="font-size:32px; color:#2b6cb0;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px; text-align:center; writing-mode:horizontal-tb;">routes</div>
-        </div>
-
-        <!-- Sherbyte -->
-        <div style="background:#0f2a1a; border:2px solid #276749; border-radius:20px; padding:48px 40px; text-align:center;">
-          <div style="font-size:52px; margin-bottom:16px;">🧠</div>
-          <div style="font-size:28px; font-weight:800; color:#48bb78; margin-bottom:8px;">Sherbyte</div>
-          <div style="font-size:16px; color:#38a169; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">Agent · Bridge · Heartbeat</div>
-          <hr class="divider" style="margin-bottom:20px; border-color:#1a3d2b;">
-          <div style="font-size:16px; color:#718096; line-height:2;">
-            Real-time conversations<br>
-            !task intake → queue.json<br>
-            30-min heartbeat loop<br>
-            Reads notifications.json<br>
-            Delivers to your DM
-          </div>
-        </div>
-
-        <!-- Arrow 2 -->
-        <div style="display:flex; flex-direction:column; align-items:center; gap:4px;">
-          <div style="font-size:32px; color:#276749;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px; text-align:center;">queues</div>
-        </div>
-
-        <!-- Background Worker -->
-        <div style="background:#2a1a0a; border:2px solid #744210; border-radius:20px; padding:48px 40px; text-align:center;">
-          <div style="font-size:52px; margin-bottom:16px;">⚙️</div>
-          <div style="font-size:28px; font-weight:800; color:#f6ad55; margin-bottom:8px;">Background Worker</div>
-          <div style="font-size:16px; color:#c47f17; margin-bottom:24px; letter-spacing:1px; text-transform:uppercase;">Headless · Executor · Cron</div>
-          <hr class="divider" style="margin-bottom:20px; border-color:#3d2a0a;">
-          <div style="font-size:16px; color:#718096; line-height:2;">
-            No chat interface<br>
-            Reads MANDATE.md<br>
-            Drains queue.json<br>
-            Cron: 08:00 IST daily<br>
-            Writes notifications.json
-          </div>
-        </div>
-      </div>
-
-      <!-- File layer -->
-      <div style="display:flex; justify-content:center; gap:24px; margin-top:8px;">
-        <div class="arch-box file" style="font-size:16px; padding:14px 24px;">📄 queue.json</div>
-        <div class="arch-box file" style="font-size:16px; padding:14px 24px;">📄 notifications.json</div>
-        <div class="arch-box file" style="font-size:16px; padding:14px 24px;">📄 escalations.json</div>
-        <div class="arch-box file" style="font-size:16px; padding:14px 24px;">📄 MANDATE.md</div>
-        <div class="arch-box file" style="font-size:16px; padding:14px 24px;">📁 results/</div>
-      </div>
-      <div style="text-align:center; font-size:15px; color:#2d3748; letter-spacing:2px;">
-        FLAT JSON FILES — AUDITABLE · CRASH-SAFE · ZERO COUPLING
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene3_OpenClaw(scene, i, total) {
-  return html(scene.title, `
-    <div style="display:flex; height:1080px; align-items:stretch;">
-
-      <!-- Left: Security posture -->
-      <div style="width:680px; padding:80px 64px; display:flex; flex-direction:column; justify-content:center; border-right:1px solid #1a2535;">
-        <div class="badge badge-blue" style="margin-bottom:28px;">OPENCLAW RUNTIME · SECURITY AUDIT</div>
-        <div style="font-size:42px; font-weight:800; color:#e2e8f0; margin-bottom:48px;">
-          Production-grade.<br>You own it.
-        </div>
-
-        <!-- Big stats -->
-        <div style="display:flex; gap:32px; margin-bottom:48px;">
-          <div style="text-align:center;">
-            <div style="font-size:88px; font-weight:900; color:#48bb78; line-height:1;">0</div>
-            <div style="font-size:17px; color:#718096; letter-spacing:2px; text-transform:uppercase;">Critical</div>
-          </div>
-          <div style="color:#2d3748; font-size:48px; display:flex; align-items:center;">·</div>
-          <div style="text-align:center;">
-            <div style="font-size:88px; font-weight:900; color:#48bb78; line-height:1;">0</div>
-            <div style="font-size:17px; color:#718096; letter-spacing:2px; text-transform:uppercase;">Warnings</div>
-          </div>
-        </div>
-
-        <!-- Security constraints -->
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div style="display:flex; gap:16px; align-items:center;">
-            <span style="color:#48bb78; font-size:20px;">🔒</span>
-            <span style="font-size:18px; color:#a0aec0;">Read-only root filesystem</span>
-          </div>
-          <div style="display:flex; gap:16px; align-items:center;">
-            <span style="color:#48bb78; font-size:20px;">🔒</span>
-            <span style="font-size:18px; color:#a0aec0;">Non-root user (uid=1000, node)</span>
-          </div>
-          <div style="display:flex; gap:16px; align-items:center;">
-            <span style="color:#48bb78; font-size:20px;">🔒</span>
-            <span style="font-size:18px; color:#a0aec0;">All Linux capabilities dropped</span>
-          </div>
-          <div style="display:flex; gap:16px; align-items:center;">
-            <span style="color:#48bb78; font-size:20px;">🔒</span>
-            <span style="font-size:18px; color:#a0aec0;">Localhost-only bind (127.0.0.1:18789)</span>
-          </div>
-          <div style="display:flex; gap:16px; align-items:center;">
-            <span style="color:#48bb78; font-size:20px;">🔒</span>
-            <span style="font-size:18px; color:#a0aec0;">Metadata endpoint blocked (DOCKER-USER chain)</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Terminal output -->
-      <div style="flex:1; padding:80px 64px; display:flex; flex-direction:column; justify-content:center; gap:28px;">
-        <div class="terminal">
-          <div class="dim">$ docker compose exec openclaw openclaw security audit</div>
-          <br>
-          <div class="green bold">✓ gateway.bind: lan (not public)</div>
-          <div class="green bold">✓ dmPolicy: allowlist</div>
-          <div class="green bold">✓ allowFrom: ["+919892787587"] — 1 number</div>
-          <div class="green bold">✓ canvas.eval: blocked permanently</div>
-          <div class="green bold">✓ root filesystem: read-only</div>
-          <div class="green bold">✓ container user: uid=1000 (node)</div>
-          <div class="green bold">✓ metadata endpoint: unreachable</div>
-          <br>
-          <div class="bold" style="color:#3fb950; font-size:22px;">Security score: 9/10</div>
-          <div class="dim">0 critical · 0 warnings</div>
-        </div>
-
-        <div class="json-block" style="font-size:16px;">
-<span class="key">"channels"</span>: {
-  <span class="key">"whatsapp"</span>: {
-    <span class="key">"dmPolicy"</span>: <span class="str">"allowlist"</span>,
-    <span class="key">"allowFrom"</span>: [<span class="str">"+919892787587"</span>],
-    <span class="key">"groupPolicy"</span>: <span class="str">"allowlist"</span>
-  }
-},
-<span class="key">"gateway"</span>: {
-  <span class="key">"bind"</span>: <span class="str">"lan"</span>,
-  <span class="key">"port"</span>: <span class="num">18789</span>,
-  <span class="key">"nodes"</span>: { <span class="key">"denyCommands"</span>: [<span class="str">"canvas.eval"</span>, ...] }
-}
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene4_Sherbyte(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:80px 120px; gap:48px;">
-
-      <div>
-        <div class="badge badge-green" style="margin-bottom:16px;">SHERBYTE · PERSONAL AI BRIDGE</div>
-        <div style="font-size:42px; font-weight:800; color:#e2e8f0;">
-          From your WhatsApp message to task execution in seconds
-        </div>
-      </div>
-
-      <!-- !task flow -->
-      <div style="display:flex; align-items:center; gap:0;">
-
-        <!-- Step 1: WhatsApp input -->
-        <div style="flex:1;">
-          <div style="background:#0f1a0f; border:2px solid #1a4a1a; border-radius:16px; padding:28px 24px;">
-            <div style="font-size:15px; color:#2d6b2d; letter-spacing:2px; margin-bottom:16px;">WHATSAPP GROUP · 10:11 PM</div>
-            <div style="background:#1f2c34; border-radius:12px; padding:16px 20px; font-size:19px; color:#e2e8f0; font-family:'Courier New',monospace;">
-              !task research: top 5 LLM agent<br>frameworks in 2026
-            </div>
-            <div style="font-size:14px; color:#2d6b2d; margin-top:12px; text-align:right;">✓✓ delivered</div>
-          </div>
-        </div>
-
-        <div style="padding:0 24px; text-align:center;">
-          <div style="font-size:36px; color:#276749;">→</div>
-          <div style="font-size:13px; color:#2d3748; letter-spacing:1px;">parses</div>
-        </div>
-
-        <!-- Step 2: Sherbyte processing -->
-        <div style="flex:1;">
-          <div class="terminal" style="font-size:16px;">
-            <div class="dim">Sherbyte: received !task</div>
-            <div class="green">→ type: research</div>
-            <div class="green">→ priority: normal</div>
-            <div class="green">→ id: t-1772618323</div>
-            <div class="green">→ Appending to queue.json</div>
-            <div class="green">→ Firing worker trigger</div>
-            <div class="yellow">✓ Queued. Runs at 08:00 IST</div>
-          </div>
-        </div>
-
-        <div style="padding:0 24px; text-align:center;">
-          <div style="font-size:36px; color:#276749;">→</div>
-          <div style="font-size:13px; color:#2d3748; letter-spacing:1px;">delivers</div>
-        </div>
-
-        <!-- Step 3: Result DM -->
-        <div style="flex:1;">
-          <div style="background:#0f1a0f; border:2px solid #1a4a1a; border-radius:16px; padding:28px 24px;">
-            <div style="font-size:15px; color:#2d6b2d; letter-spacing:2px; margin-bottom:16px;">WHATSAPP DM · NEXT MORNING</div>
-            <div class="whatsapp-bubble" style="background:#1e3a2e; font-size:18px;">
-              ✅ Research done: Top 5 LLM agent frameworks in 2026<br>
-              <span style="font-size:15px; color:#4a9a6a;">Result: workspace/results/t-1772618323.md</span>
-              <div class="ts">10:11 AM</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Heartbeat pulse -->
-      <div style="background:#0a120a; border:1px solid #1a3d1a; border-radius:16px; padding:32px 48px;">
-        <div style="display:flex; align-items:center; gap:48px;">
-          <div style="font-size:17px; color:#2d6b2d; letter-spacing:2px; text-transform:uppercase; white-space:nowrap;">30-MIN HEARTBEAT</div>
-          <div style="flex:1; display:flex; gap:8px; align-items:center;">
-            ${[...Array(16)].map((_, k) => `<div style="flex:1; height:${k===8?48:k===4||k===12?36:20}px; background:${k===8?'#48bb78':k===4||k===12?'#276749':'#1a3d1a'}; border-radius:4px;"></div>`).join('')}
-          </div>
-          <div style="font-size:17px; color:#48bb78; white-space:nowrap; text-align:right;">
-            Reads notifications.json<br>
-            <span style="color:#2d6b2d; font-size:15px;">Delivers → marks sent:true</span>
-          </div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene5_Worker(scene, i, total) {
-  return html(scene.title, `
-    <div style="display:flex; height:1080px; align-items:stretch;">
-
-      <!-- Left: MANDATE quote + design philosophy -->
-      <div style="width:660px; padding:80px 64px; display:flex; flex-direction:column; justify-content:center; gap:32px; border-right:1px solid #1a2535;">
-        <div class="badge" style="background:#2a1a0a; color:#f6ad55; margin-bottom:0;">MANDATE.md v1.6 · THE WORKER'S CONSTITUTION</div>
-
-        <div style="background:#1a0f00; border-left:4px solid #f6ad55; border-radius:0 12px 12px 0; padding:32px 36px;">
-          <div style="font-size:22px; color:#f6ad55; font-style:italic; line-height:1.7; margin-bottom:20px;">
-            "You are an autonomous background execution agent. You have no WhatsApp interface. You process a task queue, write results to files, and escalate when human input is needed. You do not chat. You execute."
-          </div>
-          <div style="font-size:15px; color:#744210; letter-spacing:2px;">— MANDATE.md, line 3</div>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:16px;">
-          <div style="display:flex; gap:16px;">
-            <span style="color:#f6ad55; font-size:20px; margin-top:2px;">⚡</span>
-            <div>
-              <div style="font-size:18px; color:#e2e8f0; font-weight:700;">Explicit trigger</div>
-              <div style="font-size:15px; color:#718096;">Fires immediately after task enqueue</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:16px;">
-            <span style="color:#f6ad55; font-size:20px; margin-top:2px;">🕐</span>
-            <div>
-              <div style="font-size:18px; color:#e2e8f0; font-weight:700;">Daily cron · 08:00 IST</div>
-              <div style="font-size:15px; color:#718096;">Recovery sweep — catches anything missed</div>
-            </div>
-          </div>
-          <div style="display:flex; gap:16px;">
-            <span style="color:#f6ad55; font-size:20px; margin-top:2px;">♻️</span>
-            <div>
-              <div style="font-size:18px; color:#e2e8f0; font-weight:700;">Crash recovery built-in</div>
-              <div style="font-size:15px; color:#718096;">Stale lock after 30m → reset & retry</div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Right: Live terminal -->
-      <div style="flex:1; padding:80px 64px; display:flex; flex-direction:column; justify-content:center; gap:28px;">
-        <div style="font-size:22px; color:#718096; letter-spacing:2px;">LIVE EXECUTION LOG</div>
-
-        <div class="terminal" style="flex:1; max-height:520px;">
-          <div class="dim">$ openclaw agent run --agent background-worker</div>
-          <br>
-          <div class="green">[08:00:01] Background Worker v1.6 starting</div>
-          <div class="dim">[08:00:01] Reading MANDATE.md... OK (v1.6)</div>
-          <div class="dim">[08:00:02] Loading queue.json... 3 tasks pending</div>
-          <div class="dim">[08:00:02] Step 0: resetting recurring tasks...</div>
-          <div class="green">[08:00:02] t001 recurring → pending (24h elapsed)</div>
-          <div class="dim">[08:00:03] Step 1: crash recovery... 0 stale tasks</div>
-          <div class="dim">[08:00:03] Step 2: block check... 0 blocked</div>
-          <br>
-          <div class="yellow">[08:00:03] Processing t009 [priority: urgent]</div>
-          <div class="dim">[08:00:03] → status: in_progress | locked_at: now</div>
-          <div class="dim">[08:00:03] → Executing type: research</div>
-          <div class="dim">[08:00:47] → Writing result to results/t009.md</div>
-          <div class="green">[08:00:47] → Quality gate: PASS (4,821 chars)</div>
-          <div class="green">[08:00:47] → status: done | Notification queued</div>
-          <br>
-          <div class="green bold">[08:00:48] Run complete. Receipt written.</div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene6_TaskQueue(scene, i, total) {
-  const tasks = [
-    { id:'t001', title:'memory-digest (recurring)', priority:'normal', status:'done', dep:'—' },
-    { id:'t002', title:'vault-health (recurring)', priority:'normal', status:'done', dep:'—' },
-    { id:'t003', title:'run-health (recurring)', priority:'normal', status:'done', dep:'—' },
-    { id:'t007', title:'failure-spike-detection', priority:'high', status:'done', dep:'t005,t006' },
-    { id:'t008', title:'mandate-self-improvement', priority:'high', status:'done', dep:'t007' },
-    { id:'t-ma-research', title:'multi-agent explainer research', priority:'normal', status:'done', dep:'—' },
-    { id:'t-1772618323', title:'LLM agent frameworks 2026', priority:'normal', status:'done', dep:'—' },
-  ];
-
-  const statusColor = s => s === 'done' ? '#48bb78' : s === 'in_progress' ? '#f6ad55' : '#718096';
-  const priorityColor = p => ({ urgent:'#fc8181', high:'#f6ad55', normal:'#63b3ed', low:'#718096' })[p] || '#718096';
-
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:60px 100px; gap:36px;">
-
-      <div>
-        <div class="badge badge-blue" style="margin-bottom:16px;">QUEUE.JSON · SCHEMA V2 · SINGLE SOURCE OF TRUTH</div>
-        <div style="font-size:42px; font-weight:800; color:#e2e8f0;">
-          A DAG with priorities, backoff, and self-healing crash recovery
-        </div>
-      </div>
-
-      <!-- Task table -->
-      <div style="background:#0d1117; border:1px solid #21262d; border-radius:14px; overflow:hidden;">
-        <div style="display:grid; grid-template-columns:160px 1fr 120px 100px 200px;
-                    background:#161b22; padding:14px 24px;
-                    font-size:14px; color:#4a5568; letter-spacing:2px; text-transform:uppercase; font-weight:700;">
-          <div>Task ID</div><div>Title</div><div>Priority</div><div>Status</div><div>depends_on</div>
-        </div>
-        ${tasks.map(t => `
-          <div style="display:grid; grid-template-columns:160px 1fr 120px 100px 200px;
-                      padding:14px 24px; border-top:1px solid #0d1117;
-                      font-size:16px; font-family:'Courier New',monospace; align-items:center;">
-            <div style="color:#79c0ff;">${t.id}</div>
-            <div style="color:#c9d1d9; font-family:'Segoe UI',sans-serif; font-size:15px;">${t.title}</div>
-            <div><span class="tag-pill" style="background:${priorityColor(t.priority)}22; color:${priorityColor(t.priority)}; font-size:13px;">${t.priority}</span></div>
-            <div style="color:${statusColor(t.status)}; font-weight:700;">${t.status}</div>
-            <div style="color:#4a5568; font-size:14px;">${t.dep}</div>
-          </div>
-        `).join('')}
-      </div>
-
-      <!-- Bottom: JSON + concepts -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
-        <div class="json-block" style="font-size:15px;">
-{
-  <span class="key">"id"</span>: <span class="str">"t007"</span>,
-  <span class="key">"priority"</span>: <span class="str">"high"</span>,
-  <span class="key">"status"</span>: <span class="grn">"done"</span>,
-  <span class="key">"depends_on"</span>: [<span class="str">"t005"</span>, <span class="str">"t006"</span>],
-  <span class="key">"retries"</span>: <span class="num">0</span>, <span class="key">"max_retries"</span>: <span class="num">3</span>,
-  <span class="key">"run_after"</span>: <span class="bool">null</span>,
-  <span class="key">"locked_at"</span>: <span class="bool">null</span>
-}
-        </div>
-        <div style="display:flex; flex-direction:column; gap:16px; justify-content:center;">
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <span style="color:#63b3ed; font-size:20px; margin-top:2px;">📊</span>
-            <div style="font-size:17px; color:#a0aec0;">Priority sort every cycle: urgent → high → normal → low</div>
-          </div>
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <span style="color:#63b3ed; font-size:20px; margin-top:2px;">🔗</span>
-            <div style="font-size:17px; color:#a0aec0;">DAG via depends_on — worker never executes blocked tasks</div>
-          </div>
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <span style="color:#63b3ed; font-size:20px; margin-top:2px;">🔄</span>
-            <div style="font-size:17px; color:#a0aec0;">Backoff: attempt 1→1min, 2→2min, 3→4min (max 1hr)</div>
-          </div>
-          <div style="display:flex; gap:12px; align-items:flex-start;">
-            <span style="color:#63b3ed; font-size:20px; margin-top:2px;">⏰</span>
-            <div style="font-size:17px; color:#a0aec0;">Stale lock_at >30min → auto-reset and retry</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene7_SelfImprovement(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:60px 100px; gap:36px;">
-
-      <div>
-        <div class="badge" style="background:#1a0a3d; color:#b794f4; margin-bottom:16px;">SELF-IMPROVEMENT SPRINT · MANDATE EVOLUTION</div>
-        <div style="font-size:40px; font-weight:800; color:#e2e8f0; line-height:1.2;">
-          The worker rewrote its own operating instructions.<br>
-          <span style="color:#b794f4;">We did not intervene once.</span>
-        </div>
-      </div>
-
-      <!-- Version comparison -->
-      <div style="display:grid; grid-template-columns:1fr 80px 1fr; gap:0; align-items:stretch;">
-
-        <!-- v1.1 -->
-        <div style="background:#0d1117; border:1px solid #21262d; border-radius:14px 0 0 14px; padding:36px 40px;">
-          <div style="font-size:15px; color:#4a5568; letter-spacing:2px; margin-bottom:16px;">MANDATE v1.1 — BEFORE SPRINT</div>
-          <div style="font-family:'Courier New',monospace; font-size:16px; line-height:2.0; color:#484f58;">
-            <div>Task types: memory-digest</div>
-            <div>Task types: vault-health</div>
-            <div>Task types: run-health</div>
-            <div>Task types: research</div>
-            <div style="color:#2d3748; text-decoration:line-through;">notifications system — ✗</div>
-            <div style="color:#2d3748; text-decoration:line-through;">per-attempt receipts — ✗</div>
-            <div style="color:#2d3748; text-decoration:line-through;">weekly digest — ✗</div>
-            <div style="color:#2d3748; text-decoration:line-through;">failure spike detection — ✗</div>
-            <div style="color:#2d3748; text-decoration:line-through;">quality gate — ✗</div>
-            <div style="color:#2d3748; text-decoration:line-through;">WORKER_STATUS.md — ✗</div>
-          </div>
-        </div>
-
-        <!-- Arrow + task list -->
-        <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; background:#0a0a14; border-top:1px solid #21262d; border-bottom:1px solid #21262d;">
-          <div style="font-size:13px; color:#2d3748; letter-spacing:1px; writing-mode:vertical-lr; transform:rotate(180deg);">5 tasks overnight</div>
-          <div style="font-size:32px; color:#b794f4;">→</div>
-          <div style="font-size:13px; color:#2d3748; letter-spacing:1px; writing-mode:vertical-lr; transform:rotate(180deg);">no human intervention</div>
-        </div>
-
-        <!-- v1.6 -->
-        <div style="background:#0d1117; border:1px solid #553c9a; border-radius:0 14px 14px 0; padding:36px 40px;">
-          <div style="font-size:15px; color:#6b46c1; letter-spacing:2px; margin-bottom:16px;">MANDATE v1.6 — AFTER SPRINT</div>
-          <div style="font-family:'Courier New',monospace; font-size:16px; line-height:2.0;">
-            <div style="color:#c9d1d9;">Task types: memory-digest</div>
-            <div style="color:#c9d1d9;">Task types: vault-health, run-health, research</div>
-            <div style="color:#3fb950;">+ notifications system (t004) ✓</div>
-            <div style="color:#3fb950;">+ per-attempt receipts (t005) ✓</div>
-            <div style="color:#3fb950;">+ weekly digest (t006) ✓</div>
-            <div style="color:#3fb950;">+ failure spike detection (t007) ✓</div>
-            <div style="color:#3fb950;">+ mandatory quality gate (t008) ✓</div>
-            <div style="color:#3fb950;">+ WORKER_STATUS.md (t008) ✓</div>
-            <div style="color:#3fb950;">+ concurrent guard (t008) ✓</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Task progress -->
-      <div style="display:flex; gap:16px; align-items:center;">
-        ${['t004', 't005', 't006', 't007', 't008'].map(t => `
-          <div style="flex:1; background:#0f1923; border:1px solid #276749; border-radius:12px; padding:20px; text-align:center;">
-            <div style="font-size:28px; margin-bottom:8px;">✅</div>
-            <div style="font-family:'Courier New',monospace; font-size:16px; color:#48bb78;">${t}</div>
-            <div style="font-size:13px; color:#2d6b2d; margin-top:4px;">done</div>
-          </div>
-        `).join('')}
-        <div style="font-size:32px; color:#b794f4; padding:0 8px;">→</div>
-        <div style="flex:1.5; background:#1a0a3d; border:2px solid #553c9a; border-radius:12px; padding:20px; text-align:center;">
-          <div style="font-size:28px; margin-bottom:8px;">🚀</div>
-          <div style="font-size:18px; color:#b794f4; font-weight:700;">MANDATE</div>
-          <div style="font-size:15px; color:#6b46c1;">v1.1 → v1.6</div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene8_TaskDemo(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:60px 100px; gap:40px;">
-
-      <div>
-        <div class="badge badge-green" style="margin-bottom:16px;">END-TO-END DEMO · ZERO MANUAL STEPS</div>
-        <div style="font-size:42px; font-weight:800; color:#e2e8f0;">
-          Eleven words in. Structured research result out.
-        </div>
-      </div>
-
-      <!-- Three-panel timeline -->
-      <div style="display:grid; grid-template-columns:1fr 60px 1fr 60px 1fr; align-items:center;">
-
-        <!-- Panel 1: Input -->
-        <div style="background:#0f1a0f; border:2px solid #276749; border-radius:16px; padding:36px 32px;">
-          <div style="font-size:14px; color:#2d6b2d; letter-spacing:2px; margin-bottom:20px;">WHATSAPP GROUP · 10:11 PM</div>
-          <div style="background:#1f2c34; border-radius:12px; padding:20px; margin-bottom:16px;">
-            <div style="font-size:19px; color:#e2e8f0; font-family:'Courier New',monospace; line-height:1.8;">
-              !task research: top 5 most<br>practical LLM agent frameworks<br>in 2026
-            </div>
-            <div style="font-size:13px; color:#4a5568; text-align:right; margin-top:8px;">✓✓ 10:11 PM</div>
-          </div>
-          <div style="font-size:15px; color:#2d6b2d;">Sherbyte queues task t-1772618323<br>Worker trigger fired immediately</div>
-        </div>
-
-        <div style="text-align:center;">
-          <div style="font-size:36px; color:#276749;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px;">overnight</div>
-        </div>
-
-        <!-- Panel 2: Worker execution -->
-        <div>
-          <div class="terminal" style="font-size:15px;">
-            <div class="dim">[08:00:03] t-1772618323 → in_progress</div>
-            <div class="dim">[08:00:03] type: research</div>
-            <div class="dim">[08:00:04] Reading context files...</div>
-            <div class="dim">[08:01:12] Researching LLM frameworks...</div>
-            <div class="dim">[08:04:33] Synthesising findings...</div>
-            <div class="green">[08:05:47] Writing results/t-1772618323.md</div>
-            <div class="green">[08:05:48] Quality gate: PASS (7,234 chars)</div>
-            <div class="green">[08:05:48] status: done</div>
-            <div class="green">[08:05:48] Notification queued → sent:false</div>
-            <br>
-            <div class="dim">Duration: 5m 45s</div>
-          </div>
-          <div style="margin-top:16px; text-align:center; font-size:15px; color:#4a5568;">
-            No tab open. No terminal watching. Just running.
-          </div>
-        </div>
-
-        <div style="text-align:center;">
-          <div style="font-size:36px; color:#276749;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px;">next heartbeat</div>
-        </div>
-
-        <!-- Panel 3: Result -->
-        <div style="background:#0f1a0f; border:2px solid #276749; border-radius:16px; padding:36px 32px;">
-          <div style="font-size:14px; color:#2d6b2d; letter-spacing:2px; margin-bottom:20px;">WHATSAPP DM · NEXT MORNING</div>
-          <div class="whatsapp-bubble" style="background:#1e3a2e; font-size:18px; max-width:100%;">
-            ✅ Research done: Top 5 LLM agent frameworks in 2026
-            <div style="font-size:14px; color:#4a9a6a; margin-top:8px;">Results at: workspace/results/t-1772618323.md</div>
-            <div class="ts">08:36 AM</div>
-          </div>
-          <div style="margin-top:16px; font-size:15px; color:#2d6b2d;">
-            Sherbyte heartbeat found sent:false<br>
-            Delivered → marked sent:true
-          </div>
-        </div>
-      </div>
-
-      <!-- Bottom stat -->
-      <div style="text-align:center; background:#0a120a; border:1px solid #1a3d1a; border-radius:12px; padding:24px;">
-        <span style="font-size:22px; color:#48bb78; font-weight:700;">11 words typed &nbsp;→&nbsp; 7,234 word research result &nbsp;·&nbsp; approx 8 hours &nbsp;·&nbsp; zero manual steps</span>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene9_NotificationLoop(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:80px 120px; gap:48px;">
-
-      <div>
-        <div class="badge badge-blue" style="margin-bottom:16px;">NOTIFICATION PIPELINE · DEAD-SIMPLE BY DESIGN</div>
-        <div style="font-size:40px; font-weight:800; color:#e2e8f0; line-height:1.2;">
-          No Kafka. No Redis. No message broker.<br>
-          <span style="color:#63b3ed;">A file, a loop, and a flag.</span>
-        </div>
-      </div>
-
-      <!-- Flow diagram -->
-      <div style="display:flex; align-items:center; gap:0;">
-
-        <div class="flow-step" style="flex:1;">
-          <div class="arch-box worker" style="width:100%; font-size:19px; padding:28px 20px;">
-            ⚙️ Background Worker
-            <div style="font-size:14px; color:#744210; font-weight:400; margin-top:8px;">completes task</div>
-          </div>
-        </div>
-
-        <div style="padding:0 20px; text-align:center;">
-          <div style="font-size:28px; color:#4a5568;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px;">writes</div>
-        </div>
-
-        <!-- JSON state: before -->
-        <div style="flex:1.6;">
-          <div class="json-block" style="font-size:15px; line-height:2.0;">
-<span class="key">"id"</span>: <span class="str">"n005"</span>,
-<span class="key">"message"</span>: <span class="str">"🚀 Sprint complete!"</span>,
-<span class="key">"sent"</span>: <span class="red">false</span>,
-<span class="key">"sent_at"</span>: <span class="bool">null</span>
-          </div>
-          <div style="text-align:center; font-size:14px; color:#4a5568; margin-top:8px;">notifications.json — sent: false</div>
-        </div>
-
-        <div style="padding:0 20px; text-align:center;">
-          <div style="font-size:20px; color:#4a5568; margin-bottom:4px;">⏰ 30 min</div>
-          <div style="font-size:28px; color:#4a5568;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px;">heartbeat fires</div>
-        </div>
-
-        <!-- Sherbyte -->
-        <div class="flow-step" style="flex:1;">
-          <div class="arch-box agent" style="width:100%; font-size:19px; padding:28px 20px;">
-            🧠 Sherbyte
-            <div style="font-size:14px; color:#276749; font-weight:400; margin-top:8px;">finds sent:false</div>
-          </div>
-        </div>
-
-        <div style="padding:0 20px; text-align:center;">
-          <div style="font-size:28px; color:#4a5568;">→</div>
-          <div style="font-size:12px; color:#2d3748; letter-spacing:1px;">delivers</div>
-        </div>
-
-        <!-- WhatsApp -->
-        <div style="flex:1;">
-          <div class="whatsapp-bubble" style="background:#1e3a2e; font-size:17px;">
-            🚀 Sprint complete!<br>MANDATE upgraded v1.4
-            <div class="ts">10:29 AM</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- After state -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:32px;">
-        <div>
-          <div style="font-size:15px; color:#2d6b2d; letter-spacing:2px; margin-bottom:12px;">AFTER DELIVERY</div>
-          <div class="json-block" style="font-size:15px; line-height:2.0;">
-<span class="key">"id"</span>: <span class="str">"n005"</span>,
-<span class="key">"sent"</span>: <span class="grn">true</span>,
-<span class="key">"sent_at"</span>: <span class="str">"2026-03-04T10:29:02Z"</span>
-          </div>
-        </div>
-        <div style="display:flex; flex-direction:column; gap:16px; justify-content:center;">
-          <div style="font-size:18px; color:#a0aec0;">
-            If Sherbyte crashes mid-delivery — notification stays <code style="color:#fc8181; font-size:16px;">sent:false</code>
-            and delivers on next heartbeat. Idempotent by design.
-          </div>
-          <div style="font-size:18px; color:#a0aec0;">
-            Max delivery window: <strong style="color:#63b3ed;">30 minutes</strong> &nbsp;·&nbsp;
-            Duplicates: <strong style="color:#48bb78;">impossible</strong>
-          </div>
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene10_Results(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; padding:80px 120px; gap:48px;">
-
-      <div>
-        <div class="badge badge-green" style="margin-bottom:16px;">PRODUCTION RESULTS · LIVE SYSTEM · REAL NUMBERS</div>
-        <div style="font-size:42px; font-weight:800; color:#e2e8f0; line-height:1.2;">
-          This is not a benchmark.<br>This is running on one laptop.
-        </div>
-      </div>
-
-      <!-- Main metrics -->
-      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:24px;">
-        <div class="metric-card">
-          <div class="num green">13</div>
-          <div class="label">Tasks<br>Completed</div>
-        </div>
-        <div class="metric-card">
-          <div class="num zero">0</div>
-          <div class="label">Task<br>Failures</div>
-        </div>
-        <div class="metric-card">
-          <div class="num">5</div>
-          <div class="label">WhatsApp<br>Notifications</div>
-        </div>
-        <div class="metric-card">
-          <div class="num green">3</div>
-          <div class="label">MANDATE<br>Self-Upgrades</div>
-        </div>
-      </div>
-
-      <!-- Run receipts -->
-      <div style="display:grid; grid-template-columns:1fr 1fr; gap:28px;">
-        <div>
-          <div style="font-size:15px; color:#4a5568; letter-spacing:2px; margin-bottom:12px;">RUN RECEIPT · 2026-03-03</div>
-          <div class="terminal" style="font-size:16px; line-height:2.0;">
-            <div class="dim">mandate_version: "1.3"</div>
-            <div class="green">tasks_processed: 5</div>
-            <div class="green">tasks_completed: 5</div>
-            <div class="red">tasks_failed: 0</div>
-            <div class="dim">escalations_raised: 0</div>
-            <div class="green">summary: "All 5 self-improvement tasks done"</div>
-          </div>
-        </div>
-        <div>
-          <div style="font-size:15px; color:#4a5568; letter-spacing:2px; margin-bottom:12px;">RUN RECEIPT · 2026-03-04</div>
-          <div class="terminal" style="font-size:16px; line-height:2.0;">
-            <div class="dim">mandate_version: "1.5"</div>
-            <div class="green">tasks_processed: 8</div>
-            <div class="green">tasks_completed: 8</div>
-            <div class="red">tasks_failed: 0</div>
-            <div class="dim">escalations_raised: 0</div>
-            <div class="green">summary: "Explainer sprint: 8/8 done"</div>
-          </div>
-        </div>
-      </div>
-
-      <div style="text-align:center; font-size:19px; color:#718096; font-style:italic;">
-        "The system is not just autonomous. It is observable. Observability is the only thing that lets you trust autonomy enough to actually sleep."
-      </div>
-    </div>
-  `, i, total);
-}
-
-function scene11_CTA(scene, i, total) {
-  return html(scene.title, `
-    <div style="height:1080px; display:flex; flex-direction:column;
-                justify-content:center; align-items:center; padding:80px 160px; text-align:center; gap:48px;">
-
-      <div>
-        <div class="badge badge-blue" style="margin-bottom:24px;">OPEN ARCHITECTURE · SWAP ANYTHING · OWN EVERYTHING</div>
-        <div style="font-size:52px; font-weight:900; color:#e2e8f0; line-height:1.2; max-width:1400px;">
-          None of this is proprietary glue.
-        </div>
-      </div>
-
-      <!-- Replaceable components -->
-      <div style="display:flex; gap:32px; width:100%;">
-        <div style="flex:1; background:#0f1f35; border:2px solid #2b6cb0; border-radius:16px; padding:36px 28px; text-align:left;">
-          <div style="font-size:22px; font-weight:700; color:#63b3ed; margin-bottom:8px;">OpenClaw Runtime</div>
-          <div style="font-size:15px; color:#2b6cb0; margin-bottom:16px;">→ your runtime, your channels</div>
-          <div style="font-size:16px; color:#718096; line-height:1.8;">
-            Swap channels, add SMS, add Discord.<br>Architecture doesn't change.
-          </div>
-        </div>
-        <div style="flex:1; background:#0f2a1a; border:2px solid #276749; border-radius:16px; padding:36px 28px; text-align:left;">
-          <div style="font-size:22px; font-weight:700; color:#48bb78; margin-bottom:8px;">Sherbyte Agent</div>
-          <div style="font-size:15px; color:#276749; margin-bottom:16px;">→ your agent logic, your persona</div>
-          <div style="font-size:16px; color:#718096; line-height:1.8;">
-            Any LLM. Any personality.<br>Heartbeat loop stays the same.
-          </div>
-        </div>
-        <div style="flex:1; background:#2a1a0a; border:2px solid #744210; border-radius:16px; padding:36px 28px; text-align:left;">
-          <div style="font-size:22px; font-weight:700; color:#f6ad55; margin-bottom:8px;">Background Worker</div>
-          <div style="font-size:15px; color:#744210; margin-bottom:16px;">→ your MANDATE, your task types</div>
-          <div style="font-size:16px; color:#718096; line-height:1.8;">
-            Markdown file + JSON queue.<br>You version-control both.
-          </div>
-        </div>
-      </div>
-
-      <!-- Stats recap -->
-      <div style="display:flex; gap:48px; align-items:center;">
-        <div style="font-size:20px; color:#48bb78; font-weight:700;">13 tasks</div>
-        <div style="color:#2d3748;">·</div>
-        <div style="font-size:20px; color:#48bb78; font-weight:700;">0 failures</div>
-        <div style="color:#2d3748;">·</div>
-        <div style="font-size:20px; color:#48bb78; font-weight:700;">5 notifications</div>
-        <div style="color:#2d3748;">·</div>
-        <div style="font-size:20px; color:#48bb78; font-weight:700;">3 self-upgrades</div>
-        <div style="color:#2d3748;">·</div>
-        <div style="font-size:20px; color:#48bb78; font-weight:700;">1 laptop</div>
-      </div>
-
-      <!-- CTA -->
-      <div style="background:linear-gradient(135deg, #1a2d4a, #0a1a2d); border:2px solid #2b6cb0; border-radius:20px; padding:48px 80px;">
-        <div style="font-size:40px; font-weight:900; color:#e2e8f0; margin-bottom:16px; line-height:1.3;">
-          What would your agent do tonight<br>while you sleep?
-        </div>
-        <div style="font-size:20px; color:#4a90d9;">
-          MANDATE.md + queue.json + a cron job.<br>That's the entire API.
-        </div>
-      </div>
-    </div>
-  `, i, total);
-}
-
-// ── Scene dispatcher ───────────────────────────────────────────────────────────
+// ── Content-driven scene renderer ─────────────────────────────────────────────
+// Renders every scene from actual script content: title, narration, visual.
+// 5 layout variants rotate by index for visual variety. Works with any script.
 
 function sceneHTML(scene, index, total) {
-  const templates = [
-    scene0_Hook,
-    scene1_Problem,
-    scene2_Architecture,
-    scene3_OpenClaw,
-    scene4_Sherbyte,
-    scene5_Worker,
-    scene6_TaskQueue,
-    scene7_SelfImprovement,
-    scene8_TaskDemo,
-    scene9_NotificationLoop,
-    scene10_Results,
-    scene11_CTA,
-  ];
-  const fn = templates[index];
-  if (!fn) {
-    // Fallback for unexpected scene count
-    return html(scene.title, `
-      <div style="height:1080px; display:flex; flex-direction:column; justify-content:center; padding:80px 120px; gap:32px;">
-        <div class="badge badge-blue">${index + 1} / ${total}</div>
-        <div style="font-size:56px; font-weight:800; line-height:1.2;">${scene.title.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>
-        ${scene.visual ? `<div style="font-size:24px; color:#718096; max-width:1400px; line-height:1.7;">${scene.visual.replace(/</g,'&lt;').replace(/>/g,'&gt;')}</div>` : ''}
+  const esc = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  const t = esc(scene.title);
+  const n = esc(scene.narration);
+  const v = esc(scene.visual);
+  const sceneLabel = `SCENE ${String(index + 1).padStart(2, '0')}`;
+  const counter = `${index + 1} / ${total}`;
+
+  // First scene → hero. Last scene → closing. Rest → rotate 3 body layouts.
+  const variant = index === 0 ? 0 : index === total - 1 ? 4 : ((index - 1) % 3) + 1;
+
+  // ── Layout 0: Hero ── large title + narration, gradient top bar ──────────────
+  if (variant === 0) return html(scene.title, `
+    <div style="height:1080px;display:flex;flex-direction:column;justify-content:center;
+                padding:0 140px;position:relative;">
+      <div style="position:absolute;top:0;left:0;right:0;height:5px;
+                  background:linear-gradient(90deg,#63b3ed,#4fd1c7,#9f7aea);"></div>
+      <div style="margin-bottom:36px;">
+        <span class="badge badge-blue">${sceneLabel}</span>
       </div>
-    `, index, total);
-  }
-  return fn(scene, index, total);
+      <div style="font-size:76px;font-weight:900;line-height:1.1;color:#f7fafc;
+                  max-width:1400px;margin-bottom:52px;letter-spacing:-1.5px;">
+        ${t}
+      </div>
+      ${n ? `<div style="font-size:30px;color:#a0aec0;line-height:1.75;max-width:1200px;
+                         border-left:4px solid #63b3ed;padding-left:36px;">${n}</div>` : ''}
+      ${v ? `<div style="margin-top:52px;font-size:18px;color:#4a5568;letter-spacing:1px;
+                         text-transform:uppercase;max-width:1000px;">
+               ↳ ${v.slice(0,130)}${v.length>130?'…':''}</div>` : ''}
+      <div style="position:absolute;bottom:48px;right:120px;font-size:15px;
+                  color:#2d3748;letter-spacing:3px;">${counter}</div>
+    </div>
+  `, index, total);
+
+  // ── Layout 1: Split ── title panel left, narration right ────────────────────
+  if (variant === 1) return html(scene.title, `
+    <div style="height:1080px;display:flex;">
+      <div style="width:480px;background:#050810;border-right:1px solid #1a2535;
+                  display:flex;flex-direction:column;justify-content:center;
+                  padding:80px 56px;position:relative;">
+        <div style="position:absolute;top:0;left:0;bottom:0;width:4px;
+                    background:linear-gradient(180deg,#63b3ed,#9f7aea);"></div>
+        <span class="badge badge-blue" style="margin-bottom:36px;width:fit-content;">${sceneLabel}</span>
+        <div style="font-size:42px;font-weight:900;line-height:1.2;color:#f7fafc;margin-bottom:36px;">
+          ${t}
+        </div>
+        ${v ? `<div style="font-size:17px;color:#4a5568;line-height:1.7;font-style:italic;">
+                 ${v.slice(0,220)}${v.length>220?'…':''}</div>` : ''}
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;justify-content:center;
+                  padding:80px 100px;position:relative;">
+        ${n ? `<div style="font-size:29px;color:#e2e8f0;line-height:1.85;max-width:980px;">${n}</div>`
+            : `<div style="font-size:24px;color:#4a5568;font-style:italic;">No narration</div>`}
+        <div style="position:absolute;bottom:48px;right:80px;font-size:15px;
+                    color:#2d3748;letter-spacing:3px;">${counter}</div>
+      </div>
+    </div>
+  `, index, total);
+
+  // ── Layout 2: Statement ── bold title dominant, narration below ──────────────
+  if (variant === 2) return html(scene.title, `
+    <div style="height:1080px;display:flex;flex-direction:column;justify-content:center;
+                padding:0 160px;position:relative;">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;
+                  background:linear-gradient(90deg,transparent,#63b3ed,transparent);"></div>
+      <div style="margin-bottom:32px;display:flex;align-items:center;gap:24px;">
+        <span class="badge badge-blue">${sceneLabel}</span>
+        <div style="height:1px;flex:1;background:#1a2535;"></div>
+      </div>
+      <div style="font-size:68px;font-weight:900;color:#f7fafc;line-height:1.15;
+                  max-width:1400px;margin-bottom:56px;letter-spacing:-1px;">
+        ${t}
+      </div>
+      ${n ? `<div style="font-size:27px;color:#718096;line-height:1.75;max-width:1200px;">${n}</div>` : ''}
+      <div style="position:absolute;bottom:48px;right:120px;font-size:15px;
+                  color:#2d3748;letter-spacing:3px;">${counter}</div>
+    </div>
+  `, index, total);
+
+  // ── Layout 3: Narrative ── title in accent colour, narration as body ─────────
+  if (variant === 3) return html(scene.title, `
+    <div style="height:1080px;display:flex;flex-direction:column;justify-content:center;
+                padding:0 140px;position:relative;">
+      <div style="margin-bottom:24px;">
+        <span class="badge badge-blue">${sceneLabel}</span>
+      </div>
+      <div style="font-size:44px;font-weight:800;color:#63b3ed;line-height:1.2;
+                  max-width:1400px;margin-bottom:48px;">
+        ${t}
+      </div>
+      ${n ? `<div style="font-size:28px;color:#cbd5e0;line-height:1.85;max-width:1380px;
+                         border-top:1px solid #1a2535;padding-top:44px;">
+               "${n}"</div>` : ''}
+      ${v ? `<div style="margin-top:44px;font-size:17px;color:#4a5568;letter-spacing:1px;font-style:italic;">
+               ↳ ${v.slice(0,160)}${v.length>160?'…':''}</div>` : ''}
+      <div style="position:absolute;bottom:48px;right:120px;font-size:15px;
+                  color:#2d3748;letter-spacing:3px;">${counter}</div>
+    </div>
+  `, index, total);
+
+  // ── Layout 4: Closing ── centred, gradient accent, scene wraps up ─────────────
+  return html(scene.title, `
+    <div style="height:1080px;display:flex;flex-direction:column;align-items:center;
+                justify-content:center;padding:0 160px;text-align:center;position:relative;">
+      <div style="position:absolute;top:0;left:0;right:0;height:5px;
+                  background:linear-gradient(90deg,#9f7aea,#63b3ed,#4fd1c7);"></div>
+      <div style="margin-bottom:40px;">
+        <span class="badge badge-blue">${sceneLabel}</span>
+      </div>
+      <div style="font-size:70px;font-weight:900;line-height:1.1;color:#f7fafc;
+                  max-width:1300px;margin-bottom:52px;letter-spacing:-1px;">
+        ${t}
+      </div>
+      ${n ? `<div style="font-size:29px;color:#a0aec0;line-height:1.75;max-width:1100px;
+                         margin-bottom:56px;">${n}</div>` : ''}
+      <div style="width:80px;height:3px;border-radius:2px;
+                  background:linear-gradient(90deg,#63b3ed,#4fd1c7);"></div>
+      <div style="position:absolute;bottom:48px;right:120px;font-size:15px;
+                  color:#2d3748;letter-spacing:3px;">${counter}</div>
+    </div>
+  `, index, total);
 }
 
 // ── TTS via Microsoft Edge Read Aloud (free, no API key) ─────────────────────

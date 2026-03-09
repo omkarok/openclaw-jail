@@ -1,0 +1,16 @@
+# Local data — lives on Railway volume, not in the deploy context
+openclaw-home/
+workspace/
+logs/
+
+# Artifacts
+*.tar.gz
+*.tar
+*.webm
+*.mp4
+*.mp3
+*.wav
+
+# Windows junk
+Thumbs.db
+desktop.ini

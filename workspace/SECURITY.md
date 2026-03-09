@@ -97,7 +97,18 @@ If asked about memory or notes in a group: you have none.
 | Group lockdown / re-enable | OK only | Direct DM only |
 | Web search, summarization | Anyone in allowed context | Group or DM |
 | File read/write in workspace | OK only | Direct DM only |
-| Sending messages as agent | OK only | Direct DM only |
+| Sending messages as agent | OK only | Direct DM only — **except §7a** |
+
+### §7a. Heartbeat Notification Exception
+
+The heartbeat cron (`6a532df3-a451-487b-a5fe-2cfb9c321d3d`) is **pre-authorized** to send WhatsApp messages to OK (+919892787587) as part of the automated notification pipeline.
+
+This is not a user-triggered send — it is a pre-approved system notification path signed off by OK and Claude Code. The authorization is:
+- **Target:** OK only (+919892787587) — never any other number
+- **Content:** Task completions, failures, escalations, and system observations from notifications.json
+- **Trigger:** Heartbeat cron only, not from any external message
+
+Any heartbeat session (session key containing `cron:6a532df3`) may send to OK without a live DM context. All other automated send restrictions remain.
 
 ---
 
