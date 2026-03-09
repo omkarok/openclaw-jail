@@ -11,6 +11,8 @@ services:
     environment:
       - HOME=/home/node
       - OPENCLAW_HOME=/home/node/.openclaw
+      - PORT=${PORT:-18789}
+      - RAILWAY=${RAILWAY:-}
 
     volumes:
       # Persist OpenClaw auth state + home inside jail (replaces /home/node)
@@ -29,10 +31,11 @@ services:
       - openclaw-sessions:/home/node/.openclaw/.openclaw/agents/main/sessions:rw
 
     ports:
-      # Localhost only — OpenClaw gateway (WebSocket + WebChat UI)
-      - "127.0.0.1:18789:18789"
-      # Localhost only — Browser control server
-      - "127.0.0.1:18791:18791"
+      # Gateway (WebSocket + WebChat UI) — bind to 0.0.0.0 for Railway/cloud;
+      # use firewall rules for localhost-only restriction on local deployments.
+      - "${BIND_HOST:-0.0.0.0}:18789:18789"
+      # Browser control server
+      - "${BIND_HOST:-0.0.0.0}:18791:18791"
 
     # -------------------------
     # HARD MODE LITE (Defense in depth)
@@ -73,24 +76,10 @@ services:
         soft: 65536
         hard: 65536
 
-    command: >
-      bash -lc "
-        echo '[preflight] Verifying egress policy (metadata endpoint check)...';
-        if curl --max-time 3 --silent http://169.254.169.254/ > /dev/null 2>&1; then
-          echo '[preflight] FATAL: Cloud metadata endpoint 169.254.169.254 is reachable.';
-          echo '[preflight] FATAL: Egress rules are NOT active. Refusing to start gateway.';
-          echo '[preflight] FATAL: Run: sudo bash ~/openclaw-jail/egress-rules.sh in WSL2, then restart.';
-          exit 1;
-        else
-          echo '[preflight] OK: Metadata endpoint blocked — egress policy confirmed active.';
-        fi;
-        openclaw gateway --port 18789 --verbose 2>&1 | tee /var/log/openclaw/gateway.log
-      "
+    # Uses entrypoint.sh (baked into image via Dockerfile CMD).
+    # Override for local hold mode: docker compose run --rm openclaw tail -f /dev/null
 
 volumes:
-  # Docker-managed volume for OpenClaw sessions — lives on WSL2 ext4 so files
-  # are created with the correct uid=1000 (node). Avoids the Windows bind-mount
-  # bug where new files always appear as root:root inside the container.
+  # Docker-managed volume for OpenClaw sessions. On Railway this is auto-created;
+  # on local WSL2 it lives on ext4 so files get correct uid=1000 ownership.
   openclaw-sessions:
-    external: true
-    name: openclaw-jail_openclaw-sessions
