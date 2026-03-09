@@ -21,15 +21,6 @@ RUN npm install -g playwright@${PLAYWRIGHT_VERSION} --ignore-scripts && playwrig
 # Create log directory owned by node user (uid 1000)
 RUN mkdir -p /var/log/openclaw && chown node:node /var/log/openclaw
 
-# Copy entrypoint script (before switching to non-root user)
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-
 # Switch to non-root node user (uid 1000, gid 1000)
 USER node
 WORKDIR /home/node
-
-# Railway assigns a dynamic PORT; default to 18789 for local use
-ENV PORT=18789
-EXPOSE ${PORT}
-
-CMD ["bash", "/usr/local/bin/entrypoint.sh"]
