@@ -44,18 +44,57 @@ if [ -d "$AGENTS_ROOT" ]; then
     fi
 fi
 
+# ── Auth seed (recovery channel) ───────────────────────────────────────────────
+# When OAuth refresh fails server-side (refresh_token_reused, revoked, etc.)
+# the bot can't self-heal because re-onboarding is an interactive flow we
+# can't run from a Railway shell-less environment. This block lets us inject
+# a fresh auth-profiles.json via a base64-encoded Railway env var
+# (OPENCLAW_AUTH_SEED_B64). The seed is only applied if its `expires` is
+# newer than what's already on the volume — so once openclaw refreshes the
+# token naturally, the on-disk copy wins and the env var becomes a no-op.
+# Leave the env var set as a safety net or remove it once you're stable.
+AGENT_DIR="$HOME/.openclaw/.openclaw/agents/main/agent"
+AUTH_STORE="$AGENT_DIR/auth-profiles.json"
+LEGACY_AUTH="$AGENT_DIR/auth.json"
+mkdir -p "$AGENT_DIR"
+
+if [ -n "${OPENCLAW_AUTH_SEED_B64:-}" ]; then
+    SEED_TMP=$(mktemp)
+    if echo "$OPENCLAW_AUTH_SEED_B64" | base64 -d > "$SEED_TMP" 2>/dev/null && python3 -c "import json,sys; json.load(open('$SEED_TMP'))" 2>/dev/null; then
+        SEED_EXPIRES=$(python3 -c "import json; d=json.load(open('$SEED_TMP')); print(max((p.get('expires',0) for p in d.get('profiles',{}).values()), default=0))")
+        DISK_EXPIRES=0
+        if [ -f "$AUTH_STORE" ]; then
+            DISK_EXPIRES=$(python3 -c "import json; d=json.load(open('$AUTH_STORE')); print(max((p.get('expires',0) for p in d.get('profiles',{}).values()), default=0))" 2>/dev/null || echo 0)
+        fi
+        if [ "$SEED_EXPIRES" -gt "$DISK_EXPIRES" ]; then
+            cp "$SEED_TMP" "$AUTH_STORE"
+            cp "$SEED_TMP" "$LEGACY_AUTH"
+            chmod 600 "$AUTH_STORE" "$LEGACY_AUTH"
+            echo "[railway] Auth seed applied (seed_expires=$SEED_EXPIRES disk_expires=$DISK_EXPIRES)"
+        else
+            echo "[railway] Auth seed older than on-disk (seed_expires=$SEED_EXPIRES disk_expires=$DISK_EXPIRES) — skipping."
+        fi
+    else
+        echo "[railway] WARNING: OPENCLAW_AUTH_SEED_B64 set but is not valid base64 JSON — ignored."
+    fi
+    rm -f "$SEED_TMP"
+fi
+
 # ── Auth visibility: log auth.json state so we can diagnose from logs ──────────
 # Without this we have to railway-ssh in to see if auth.json is present and
 # being refreshed. With it, `railway logs` shows the state at every boot.
-AUTH_FILE="$HOME/.openclaw/.openclaw/agents/main/agent/auth.json"
-if [ -f "$AUTH_FILE" ]; then
-    SIZE=$(stat -c %s "$AUTH_FILE" 2>/dev/null || echo "?")
-    MTIME=$(stat -c %y "$AUTH_FILE" 2>/dev/null || echo "?")
-    # Hash a chunk of the refresh_token so we can correlate boots without exposing the secret
-    HASH=$(grep -oE '"refresh"\s*:\s*"[^"]+"' "$AUTH_FILE" 2>/dev/null | sha256sum 2>/dev/null | cut -c1-12 || echo "?")
-    echo "[railway] auth.json present: size=$SIZE mtime=$MTIME refresh_hash=$HASH"
+if [ -f "$AUTH_STORE" ]; then
+    SIZE=$(stat -c %s "$AUTH_STORE" 2>/dev/null || echo "?")
+    MTIME=$(stat -c %y "$AUTH_STORE" 2>/dev/null || echo "?")
+    HASH=$(grep -oE '"refresh"\s*:\s*"[^"]+"' "$AUTH_STORE" 2>/dev/null | sha256sum 2>/dev/null | cut -c1-12 || echo "?")
+    echo "[railway] auth-profiles.json present: size=$SIZE mtime=$MTIME refresh_hash=$HASH"
+elif [ -f "$LEGACY_AUTH" ]; then
+    SIZE=$(stat -c %s "$LEGACY_AUTH" 2>/dev/null || echo "?")
+    MTIME=$(stat -c %y "$LEGACY_AUTH" 2>/dev/null || echo "?")
+    HASH=$(grep -oE '"refresh"\s*:\s*"[^"]+"' "$LEGACY_AUTH" 2>/dev/null | sha256sum 2>/dev/null | cut -c1-12 || echo "?")
+    echo "[railway] auth.json (legacy) present: size=$SIZE mtime=$MTIME refresh_hash=$HASH"
 else
-    echo "[railway] WARNING: auth.json missing — run scripts/reauth-codex-railway.sh once to onboard."
+    echo "[railway] WARNING: no auth-profiles.json or auth.json found — set OPENCLAW_AUTH_SEED_B64 or onboard."
 fi
 
 # ── Gateway token ──────────────────────────────────────────────────────────────
