@@ -6,6 +6,12 @@
 #   bash scripts/export-to-railway.sh <railway-service-name>
 #
 # Requires: railway CLI logged in, docker running locally.
+#
+# NOTE: For Codex OAuth recovery specifically, prefer
+# scripts/reauth-codex-railway.sh — it onboards directly inside the Railway
+# container (openclaw auto-detects remote env) so no local Docker → Railway
+# tar copy is needed. This script remains useful for bulk-migrating sessions
+# / workspace / agents config from a laptop to Railway on initial deploy.
 
 set -e
 SERVICE=${1:-openclaw}
@@ -15,12 +21,16 @@ echo "[export] Bundling openclaw state..."
 TMPDIR_LOCAL=$(mktemp -d)
 EXPORT_TAR="$TMPDIR_LOCAL/openclaw-export.tar.gz"
 
-# 1. Export openclaw config + agent auth from bind mount
+# 1. Export openclaw config + agent auth from bind mount.
+#    IMPORTANT: do NOT include agents/background-worker (or any non-main agent).
+#    Each agent dir carries its own auth.json with a copy of the refresh_token,
+#    and openclaw's refresh lock is per-file, not cross-agent. Two agent dirs
+#    on Railway = guaranteed refresh_token_reused race within a few days.
+#    railway-start.sh now also prunes stray agent dirs at boot as a safety net.
 tar -czf "$EXPORT_TAR" \
   -C ~/openclaw-jail/openclaw-home \
   .openclaw/.openclaw/openclaw.json \
   .openclaw/.openclaw/agents/main/agent \
-  .openclaw/.openclaw/agents/background-worker \
   2>/dev/null || true
 
 # 2. Append sessions from named Docker volume

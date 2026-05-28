@@ -695,12 +695,117 @@ openclaw channels logout --channel whatsapp && openclaw channels login --channel
 
 ### OpenAI Codex OAuth token
 
-Auto-managed by OpenClaw / OpenAI. No manual action needed. If auth breaks after a long pause:
+Auto-managed by OpenClaw / OpenAI. **If the bot replies on WhatsApp with**
+`Agent failed before reply: OAuth token refresh failed for openai-codex` —
+the Codex OAuth token expired and OpenClaw could not silently refresh it.
+This is intrinsic to the OAuth protocol: refresh ultimately requires the
+human to re-approve in a browser. There is **no non-interactive flag** —
+openclaw hard-codes `"OAuth requires interactive mode"`.
 
+#### Why this used to fail every 4-5 days (and shouldn't anymore)
+
+Old failure mode: this deployment had two agent dirs synced to Railway —
+`agents/main/agent` and `agents/background-worker` — each with its own
+`auth.json` carrying a copy of the same starting `refresh_token`.
+OpenAI Codex uses refresh-token rotation (the old refresh_token is
+invalidated server-side on every refresh), and openclaw's refresh lock is
+per-file, not cross-agent. So both agents would race to refresh against
+the same upstream rotation. The loser got `refresh_token_reused` and that
+agent's `auth.json` became permanently dead — bot failed until the next
+manual onboard.
+
+Structural fix (active now):
+- `scripts/railway-start.sh` prunes every non-`main` agent dir at boot, so
+  there can only ever be one `auth.json` and the race vector is gone.
+- `scripts/export-to-railway.sh` no longer ships `background-worker`, so a
+  future bulk migration can't re-introduce it.
+- Boot logs include `auth.json present: size=… mtime=… refresh_hash=…` so
+  you can diagnose from `railway logs` without SSH'ing in. A changing
+  `refresh_hash` across boots proves refresh writes are persisting on the
+  Railway volume.
+
+Expected lifecycle after the fix: re-onboard once after the first deploy
+of this code (one-time, current tokens are already invalidated), then
+ChatGPT Plus OAuth runs indefinitely with no human touch.
+
+#### Recovery on Railway (canonical — production runs here)
+
+openclaw's `isRemoteEnvironment()` detects any Linux container without
+DISPLAY/WSL — including Railway — and switches OAuth into "paste the
+redirect URL back" mode. So we run `openclaw onboard` directly inside
+the Railway container over SSH. No local Docker dance, no
+`export-to-railway.sh`, no copying tarballs.
+
+One command (after a one-time `railway login`):
+
+Windows (PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\openclaw-jail\scripts\reauth-codex-railway.ps1
+```
+
+macOS / Linux / WSL2:
+```bash
+bash ~/openclaw-jail/scripts/reauth-codex-railway.sh
+```
+
+The script:
+1. Verifies the Railway CLI is installed and you're logged in (prompts
+   `railway login` if not — opens browser, one-time per machine).
+2. Verifies the working directory is linked to your Railway project
+   (prompts `railway link` if not).
+3. Opens `railway ssh --service openclaw` and tells you the exact
+   `openclaw onboard` command to paste.
+4. You sign in on your laptop browser with **ChatGPT Plus**, paste the
+   final redirect URL back into the SSH session.
+5. After you `exit`, the script runs `railway redeploy` so the
+   gateway re-reads the new `auth.json`.
+
+#### Recovery on local Docker (fallback / dev only)
+
+If you're not running on Railway (developing locally), the local script
+still works — it onboard's against the `docker compose` container:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\openclaw-jail\scripts\reauth-codex.ps1
+```
+```bash
+bash ~/openclaw-jail/scripts/reauth-codex.sh
+```
+
+#### Manual fallback (no scripts)
+
+Railway:
+```bash
+railway ssh --service openclaw
+# Inside container:
+openclaw onboard --auth-choice openai-codex --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
+# Open URL in browser, sign in, paste redirect URL back into shell.
+# Exit, then on your laptop:
+railway redeploy --service openclaw
+```
+
+Local Docker:
 ```bash
 docker compose exec openclaw bash
 openclaw onboard --auth-choice openai-codex --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
+docker compose restart openclaw
 ```
+
+#### Permanent escape hatch — switch to OpenAI API key
+
+No OAuth, no browser, survives restarts forever — but you pay per token
+instead of using your ChatGPT Plus subscription. Run interactively once:
+
+```bash
+# On Railway:
+railway ssh --service openclaw
+# Or local: docker compose exec openclaw bash
+openclaw onboard --auth-choice openai-api-key --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
+# Paste your sk-... key when prompted
+```
+
+Use this if you keep getting bitten by token expiry and would rather pay
+metered usage to avoid the recovery dance.
 
 ---
 
