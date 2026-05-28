@@ -34,6 +34,7 @@ These are hard-won lessons. Skipping them costs hours.
 | 8 | Browser dashboard needs **`#token=...` in the URL hash** — the page loads without it but the WebSocket connect frame won't include the token | Always open `http://localhost:18789/#token=<token>` |
 | 9 | WhatsApp uses **Baileys (WhatsApp Web)** — it links to an existing account and sees all messages | Recommend a dedicated number; ensure `allowFrom` is set before linking |
 | 10 | After re-linking WhatsApp with `dmPolicy: "allowlist"`, **no pairing approval step is needed** — `allowFrom` is the access control | Just text the bot after re-link |
+| 11 | The `@openclaw/acpx` extension lazily runs `npm install acpx@<pinned>` into `/usr/local/lib/node_modules/openclaw/extensions/acpx/node_modules` on first ACP spawn — that path is **root-owned and read-only at runtime**, so the install fails with EACCES and `sessions_spawn(runtime:"acp", ...)` returns "ACP runtime backend is currently unavailable" | Pre-bake the install during `docker compose build` (handled by the `ACPX_VERSION` arg in `Dockerfile`); after bumping `OPENCLAW_VERSION`, also bump `ACPX_VERSION` to match the new `ACPX_PINNED_VERSION` in the extension's `src/config.ts` |
 
 ---
 
@@ -81,6 +82,11 @@ Takes ~3–4 minutes on first run. Subsequent builds use cache.
 Verify:
 ```bash
 docker compose run --rm openclaw openclaw --version
+
+# Confirm the ACP runtime backend (acpx) was baked into the image — must print
+# the pinned version (currently 0.1.15) without "EACCES" / "permission denied".
+docker compose run --rm --entrypoint /usr/local/lib/node_modules/openclaw/extensions/acpx/node_modules/.bin/acpx \
+  openclaw --version
 ```
 
 ---
@@ -200,6 +206,11 @@ docker compose exec -T openclaw bash -c "touch /etc/_fail 2>&1 && echo FAIL || e
 # 6. Security audit
 docker compose exec -T openclaw openclaw security audit
 # → 0 critical · 0 warn
+
+# 7. ACP runtime backend (acpx) available
+docker compose exec -T openclaw \
+  /usr/local/lib/node_modules/openclaw/extensions/acpx/node_modules/.bin/acpx --version
+# → 0.1.15  (or whatever ACPX_PINNED_VERSION the current openclaw expects)
 ```
 
 ---
@@ -265,6 +276,7 @@ Before declaring setup complete, all of the following must be true:
 - [ ] `touch /_fail` inside container → permission denied
 - [ ] `touch /home/node/workspace/_ok` inside container → success
 - [ ] `openclaw security audit` → 0 critical · 0 warn
+- [ ] ACP backend: `extensions/acpx/node_modules/.bin/acpx --version` prints the pinned version (no EACCES)
 - [ ] Auth state exists: `openclaw-home/.openclaw/.openclaw/agents/main/agent/auth.json`
 - [ ] Gateway log shows `listening on ws://0.0.0.0:18789`
 - [ ] (If WhatsApp) `channels status` → `dm:allowlist`
