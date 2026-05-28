@@ -702,6 +702,32 @@ This is intrinsic to the OAuth protocol: refresh ultimately requires the
 human to re-approve in a browser. There is **no non-interactive flag** —
 openclaw hard-codes `"OAuth requires interactive mode"`.
 
+#### Why this used to fail every 4-5 days (and shouldn't anymore)
+
+Old failure mode: this deployment had two agent dirs synced to Railway —
+`agents/main/agent` and `agents/background-worker` — each with its own
+`auth.json` carrying a copy of the same starting `refresh_token`.
+OpenAI Codex uses refresh-token rotation (the old refresh_token is
+invalidated server-side on every refresh), and openclaw's refresh lock is
+per-file, not cross-agent. So both agents would race to refresh against
+the same upstream rotation. The loser got `refresh_token_reused` and that
+agent's `auth.json` became permanently dead — bot failed until the next
+manual onboard.
+
+Structural fix (active now):
+- `scripts/railway-start.sh` prunes every non-`main` agent dir at boot, so
+  there can only ever be one `auth.json` and the race vector is gone.
+- `scripts/export-to-railway.sh` no longer ships `background-worker`, so a
+  future bulk migration can't re-introduce it.
+- Boot logs include `auth.json present: size=… mtime=… refresh_hash=…` so
+  you can diagnose from `railway logs` without SSH'ing in. A changing
+  `refresh_hash` across boots proves refresh writes are persisting on the
+  Railway volume.
+
+Expected lifecycle after the fix: re-onboard once after the first deploy
+of this code (one-time, current tokens are already invalidated), then
+ChatGPT Plus OAuth runs indefinitely with no human touch.
+
 #### Recovery on Railway (canonical — production runs here)
 
 openclaw's `isRemoteEnvironment()` detects any Linux container without
