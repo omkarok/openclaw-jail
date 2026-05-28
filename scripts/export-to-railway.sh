@@ -6,6 +6,12 @@
 #   bash scripts/export-to-railway.sh <railway-service-name>
 #
 # Requires: railway CLI logged in, docker running locally.
+#
+# NOTE: For Codex OAuth recovery specifically, prefer
+# scripts/reauth-codex-railway.sh — it onboards directly inside the Railway
+# container (openclaw auto-detects remote env) so no local Docker → Railway
+# tar copy is needed. This script remains useful for bulk-migrating sessions
+# / workspace / agents config from a laptop to Railway on initial deploy.
 
 set -e
 SERVICE=${1:-openclaw}

@@ -702,37 +702,78 @@ This is intrinsic to the OAuth protocol: refresh ultimately requires the
 human to re-approve in a browser. There is **no non-interactive flag** —
 openclaw hard-codes `"OAuth requires interactive mode"`.
 
-**Quick recovery (one command, ~30 seconds + your sign-in):**
+#### Recovery on Railway (canonical — production runs here)
+
+openclaw's `isRemoteEnvironment()` detects any Linux container without
+DISPLAY/WSL — including Railway — and switches OAuth into "paste the
+redirect URL back" mode. So we run `openclaw onboard` directly inside
+the Railway container over SSH. No local Docker dance, no
+`export-to-railway.sh`, no copying tarballs.
+
+One command (after a one-time `railway login`):
 
 Windows (PowerShell):
 ```powershell
-powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\openclaw-jail\scripts\reauth-codex.ps1
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\openclaw-jail\scripts\reauth-codex-railway.ps1
 ```
 
-WSL2 / Linux / macOS:
+macOS / Linux / WSL2:
+```bash
+bash ~/openclaw-jail/scripts/reauth-codex-railway.sh
+```
+
+The script:
+1. Verifies the Railway CLI is installed and you're logged in (prompts
+   `railway login` if not — opens browser, one-time per machine).
+2. Verifies the working directory is linked to your Railway project
+   (prompts `railway link` if not).
+3. Opens `railway ssh --service openclaw` and tells you the exact
+   `openclaw onboard` command to paste.
+4. You sign in on your laptop browser with **ChatGPT Plus**, paste the
+   final redirect URL back into the SSH session.
+5. After you `exit`, the script runs `railway redeploy` so the
+   gateway re-reads the new `auth.json`.
+
+#### Recovery on local Docker (fallback / dev only)
+
+If you're not running on Railway (developing locally), the local script
+still works — it onboard's against the `docker compose` container:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\openclaw-jail\scripts\reauth-codex.ps1
+```
 ```bash
 bash ~/openclaw-jail/scripts/reauth-codex.sh
 ```
 
-The script backs up `auth.json`, runs `openclaw onboard` with a TTY, then
-restarts the container. When prompted, open the printed URL in your browser
-and sign in with **ChatGPT Plus**.
+#### Manual fallback (no scripts)
 
-**Manual fallback** (if the script can't be used):
+Railway:
+```bash
+railway ssh --service openclaw
+# Inside container:
+openclaw onboard --auth-choice openai-codex --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
+# Open URL in browser, sign in, paste redirect URL back into shell.
+# Exit, then on your laptop:
+railway redeploy --service openclaw
+```
 
+Local Docker:
 ```bash
 docker compose exec openclaw bash
 openclaw onboard --auth-choice openai-codex --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
-# Then on the host:
 docker compose restart openclaw
 ```
 
-**Permanent escape hatch — switch to OpenAI API key** (no OAuth, no browser,
-survives restarts forever — but you pay per token instead of using your
-ChatGPT Plus subscription). Run interactively once:
+#### Permanent escape hatch — switch to OpenAI API key
+
+No OAuth, no browser, survives restarts forever — but you pay per token
+instead of using your ChatGPT Plus subscription. Run interactively once:
 
 ```bash
-docker compose exec openclaw bash
+# On Railway:
+railway ssh --service openclaw
+# Or local: docker compose exec openclaw bash
 openclaw onboard --auth-choice openai-api-key --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
 # Paste your sk-... key when prompted
 ```
