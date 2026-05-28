@@ -695,12 +695,50 @@ openclaw channels logout --channel whatsapp && openclaw channels login --channel
 
 ### OpenAI Codex OAuth token
 
-Auto-managed by OpenClaw / OpenAI. No manual action needed. If auth breaks after a long pause:
+Auto-managed by OpenClaw / OpenAI. **If the bot replies on WhatsApp with**
+`Agent failed before reply: OAuth token refresh failed for openai-codex` —
+the Codex OAuth token expired and OpenClaw could not silently refresh it.
+This is intrinsic to the OAuth protocol: refresh ultimately requires the
+human to re-approve in a browser. There is **no non-interactive flag** —
+openclaw hard-codes `"OAuth requires interactive mode"`.
+
+**Quick recovery (one command, ~30 seconds + your sign-in):**
+
+Windows (PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File $env:USERPROFILE\openclaw-jail\scripts\reauth-codex.ps1
+```
+
+WSL2 / Linux / macOS:
+```bash
+bash ~/openclaw-jail/scripts/reauth-codex.sh
+```
+
+The script backs up `auth.json`, runs `openclaw onboard` with a TTY, then
+restarts the container. When prompted, open the printed URL in your browser
+and sign in with **ChatGPT Plus**.
+
+**Manual fallback** (if the script can't be used):
 
 ```bash
 docker compose exec openclaw bash
 openclaw onboard --auth-choice openai-codex --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
+# Then on the host:
+docker compose restart openclaw
 ```
+
+**Permanent escape hatch — switch to OpenAI API key** (no OAuth, no browser,
+survives restarts forever — but you pay per token instead of using your
+ChatGPT Plus subscription). Run interactively once:
+
+```bash
+docker compose exec openclaw bash
+openclaw onboard --auth-choice openai-api-key --no-install-daemon --skip-channels --skip-skills --skip-ui --workspace /home/node/workspace
+# Paste your sk-... key when prompted
+```
+
+Use this if you keep getting bitten by token expiry and would rather pay
+metered usage to avoid the recovery dance.
 
 ---
 
