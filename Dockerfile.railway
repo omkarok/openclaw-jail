@@ -37,7 +37,20 @@ RUN set -eux \
       rm "$tarball"; \
       echo "==> Pre-baked $id: $(ls $dest)"; \
       test -f "$dest/dist/index.js" || (echo "FATAL: missing runtime entry at $dest/dist/index.js" && exit 1); \
-    done
+    done \
+ # Workaround for @openclaw/whatsapp@2026.5.28 package shape bug: the
+ # package.json declares `channel.persistedAuthState.specifier:"./auth-presence"`
+ # (source-relative) but ships only `dist/auth-presence.js` — no matching
+ # `runtimePersistedAuthState` field, unlike `runtimeExtensions` /
+ # `runtimeSetupEntry`. openclaw's resolver (resolvePluginModuleCandidates)
+ # looks for the file at plugin root with .js/.ts/.mts extensions and never
+ # walks into dist/. Without this, every boot logs
+ # "failed to load persistedAuthState checker for whatsapp" and channel
+ # presence detection silently degrades. Mirror the dist contents up one
+ # level so source-relative specifiers also resolve.
+ && WA_DEST="$PLUGINS_DIR/whatsapp" \
+ && ln -sf dist/auth-presence.js "$WA_DEST/auth-presence.js" \
+ && test -e "$WA_DEST/auth-presence.js" || (echo "FATAL: auth-presence symlink failed" && exit 1)
 
 # Install Playwright OS-level deps
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION} --ignore-scripts && \
