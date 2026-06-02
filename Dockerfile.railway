@@ -2,20 +2,34 @@ FROM node:22.22.0-bookworm
 
 ARG OPENCLAW_VERSION=2026.5.28
 ARG PLAYWRIGHT_VERSION=1.58.2
-# As of openclaw 2026.4.x the ACP backend moved out of the in-tree
-# `extensions/acpx` dir and is now a separately published scoped npm package
-# `@openclaw/acpx`. Version stream tracks openclaw releases — pin in lockstep.
+# As of openclaw 2026.4.x, two previously-bundled extensions moved out into
+# separately-published scoped npm packages whose version stream tracks
+# openclaw releases. Pin each in lockstep with OPENCLAW_VERSION.
 ARG ACPX_VERSION=2026.5.28
+ARG WHATSAPP_VERSION=2026.5.28
 
 # Install openclaw globally (read-only FS safe — binary in /usr/local/bin)
 RUN corepack enable && npm install -g openclaw@${OPENCLAW_VERSION}
 
-# Pre-bake the ACP runtime backend (`@openclaw/acpx`) globally so first ACP
-# session doesn't need to npm-install onto the read-only root or onto the
-# (slow, cold-start-blocking) volume. Installs to
-# /usr/local/lib/node_modules/@openclaw/acpx — openclaw's runtime finds it
-# there via the global node_modules lookup.
-RUN npm install -g @openclaw/acpx@${ACPX_VERSION}
+# Pre-bake @openclaw/acpx and @openclaw/whatsapp into openclaw's bundled
+# extensions directory so they are discovered by resolveBundledPluginsDirForRoot
+# (looks at <pkg>/extensions, /dist-runtime/extensions, /dist/extensions).
+# We npm-pack the scoped tarballs then extract directly to extensions/<id>/
+# — this preserves each plugin's bundled node_modules and works on a
+# read-only root at runtime (write happens here at build time).
+RUN mkdir -p /usr/local/lib/node_modules/openclaw/extensions \
+ && cd /tmp \
+ && npm pack @openclaw/acpx@${ACPX_VERSION} @openclaw/whatsapp@${WHATSAPP_VERSION} \
+ && mkdir -p /usr/local/lib/node_modules/openclaw/extensions/acpx \
+              /usr/local/lib/node_modules/openclaw/extensions/whatsapp \
+ && tar -xzf openclaw-acpx-${ACPX_VERSION}.tgz \
+        -C /usr/local/lib/node_modules/openclaw/extensions/acpx \
+        --strip-components=1 \
+ && tar -xzf openclaw-whatsapp-${WHATSAPP_VERSION}.tgz \
+        -C /usr/local/lib/node_modules/openclaw/extensions/whatsapp \
+        --strip-components=1 \
+ && rm openclaw-acpx-${ACPX_VERSION}.tgz openclaw-whatsapp-${WHATSAPP_VERSION}.tgz \
+ && ls /usr/local/lib/node_modules/openclaw/extensions/
 
 # Install Playwright OS-level deps
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION} --ignore-scripts && \
