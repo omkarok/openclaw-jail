@@ -16,17 +16,13 @@ RUN corepack enable && npm install -g openclaw@${OPENCLAW_VERSION}
 # in bundled-DdbF6Bpc.js: when RUNNING_FROM_BUILT_ARTIFACT is true it ONLY
 # scans <openclaw>/dist/extensions/, never <openclaw>/extensions/).
 #
-# Each plugin dir must mirror the layout of bundled plugins (compare to
-# the in-tree `signal` plugin): flat top-level `index.js` + sibling
-# compiled chunks, plus `openclaw.plugin.json`, `package.json`, and any
-# `node_modules/` the plugin bundles. The npm tarball ships the compiled
-# code under `package/dist/` so we npm-pack, extract to a scratch dir,
-# then copy `dist/*` to the plugin root and `package.json` /
-# `openclaw.plugin.json` / `node_modules/` (if any) alongside.
-#
-# `openclaw.extensions[0]` in package.json is `"./index.ts"` for both —
-# openclaw rewrites the extension to `.js` and looks in the plugin root,
-# which is what we set up here.
+# Entry resolution: the new plugin loader reads package.json's
+# `openclaw.runtimeExtensions[0]` *literally* (validatePackageExtensionEntry
+# with requireExisting: true). Both packages publish that field as
+# "./dist/index.js" — so we must preserve the nested dist/ folder, not
+# flatten it. Strip only the top-level `package/` directory from the
+# tarball; everything underneath (dist/, node_modules/, manifests) lands
+# at `<openclaw>/dist/extensions/<id>/`.
 RUN set -eux \
  && PLUGINS_DIR=/usr/local/lib/node_modules/openclaw/dist/extensions \
  && mkdir -p "$PLUGINS_DIR" \
@@ -35,18 +31,12 @@ RUN set -eux \
  && for spec in "acpx:${ACPX_VERSION}" "whatsapp:${WHATSAPP_VERSION}"; do \
       id="${spec%%:*}"; ver="${spec##*:}"; \
       tarball="openclaw-${id}-${ver}.tgz"; \
-      scratch="/tmp/extract-${id}"; \
       dest="$PLUGINS_DIR/${id}"; \
-      mkdir -p "$scratch" "$dest"; \
-      tar -xzf "$tarball" -C "$scratch"; \
-      cp -a "$scratch/package/dist/." "$dest/"; \
-      cp "$scratch/package/openclaw.plugin.json" "$dest/"; \
-      cp "$scratch/package/package.json" "$dest/"; \
-      if [ -d "$scratch/package/node_modules" ]; then \
-        cp -a "$scratch/package/node_modules" "$dest/node_modules"; \
-      fi; \
-      rm -rf "$scratch" "$tarball"; \
-      echo "==> Pre-baked $id: $(ls $dest | head -5)"; \
+      mkdir -p "$dest"; \
+      tar -xzf "$tarball" -C "$dest" --strip-components=1; \
+      rm "$tarball"; \
+      echo "==> Pre-baked $id: $(ls $dest)"; \
+      test -f "$dest/dist/index.js" || (echo "FATAL: missing runtime entry at $dest/dist/index.js" && exit 1); \
     done
 
 # Install Playwright OS-level deps
