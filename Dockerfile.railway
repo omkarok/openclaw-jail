@@ -11,25 +11,43 @@ ARG WHATSAPP_VERSION=2026.5.28
 # Install openclaw globally (read-only FS safe — binary in /usr/local/bin)
 RUN corepack enable && npm install -g openclaw@${OPENCLAW_VERSION}
 
-# Pre-bake @openclaw/acpx and @openclaw/whatsapp into openclaw's bundled
-# extensions directory so they are discovered by resolveBundledPluginsDirForRoot
-# (looks at <pkg>/extensions, /dist-runtime/extensions, /dist/extensions).
-# We npm-pack the scoped tarballs then extract directly to extensions/<id>/
-# — this preserves each plugin's bundled node_modules and works on a
-# read-only root at runtime (write happens here at build time).
-RUN mkdir -p /usr/local/lib/node_modules/openclaw/extensions \
+# Pre-bake @openclaw/acpx and @openclaw/whatsapp so they are discovered by
+# openclaw's built-artifact plugin scanner (resolveBundledPluginScanDir
+# in bundled-DdbF6Bpc.js: when RUNNING_FROM_BUILT_ARTIFACT is true it ONLY
+# scans <openclaw>/dist/extensions/, never <openclaw>/extensions/).
+#
+# Each plugin dir must mirror the layout of bundled plugins (compare to
+# the in-tree `signal` plugin): flat top-level `index.js` + sibling
+# compiled chunks, plus `openclaw.plugin.json`, `package.json`, and any
+# `node_modules/` the plugin bundles. The npm tarball ships the compiled
+# code under `package/dist/` so we npm-pack, extract to a scratch dir,
+# then copy `dist/*` to the plugin root and `package.json` /
+# `openclaw.plugin.json` / `node_modules/` (if any) alongside.
+#
+# `openclaw.extensions[0]` in package.json is `"./index.ts"` for both —
+# openclaw rewrites the extension to `.js` and looks in the plugin root,
+# which is what we set up here.
+RUN set -eux \
+ && PLUGINS_DIR=/usr/local/lib/node_modules/openclaw/dist/extensions \
+ && mkdir -p "$PLUGINS_DIR" \
  && cd /tmp \
  && npm pack @openclaw/acpx@${ACPX_VERSION} @openclaw/whatsapp@${WHATSAPP_VERSION} \
- && mkdir -p /usr/local/lib/node_modules/openclaw/extensions/acpx \
-              /usr/local/lib/node_modules/openclaw/extensions/whatsapp \
- && tar -xzf openclaw-acpx-${ACPX_VERSION}.tgz \
-        -C /usr/local/lib/node_modules/openclaw/extensions/acpx \
-        --strip-components=1 \
- && tar -xzf openclaw-whatsapp-${WHATSAPP_VERSION}.tgz \
-        -C /usr/local/lib/node_modules/openclaw/extensions/whatsapp \
-        --strip-components=1 \
- && rm openclaw-acpx-${ACPX_VERSION}.tgz openclaw-whatsapp-${WHATSAPP_VERSION}.tgz \
- && ls /usr/local/lib/node_modules/openclaw/extensions/
+ && for spec in "acpx:${ACPX_VERSION}" "whatsapp:${WHATSAPP_VERSION}"; do \
+      id="${spec%%:*}"; ver="${spec##*:}"; \
+      tarball="openclaw-${id}-${ver}.tgz"; \
+      scratch="/tmp/extract-${id}"; \
+      dest="$PLUGINS_DIR/${id}"; \
+      mkdir -p "$scratch" "$dest"; \
+      tar -xzf "$tarball" -C "$scratch"; \
+      cp -a "$scratch/package/dist/." "$dest/"; \
+      cp "$scratch/package/openclaw.plugin.json" "$dest/"; \
+      cp "$scratch/package/package.json" "$dest/"; \
+      if [ -d "$scratch/package/node_modules" ]; then \
+        cp -a "$scratch/package/node_modules" "$dest/node_modules"; \
+      fi; \
+      rm -rf "$scratch" "$tarball"; \
+      echo "==> Pre-baked $id: $(ls $dest | head -5)"; \
+    done
 
 # Install Playwright OS-level deps
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION} --ignore-scripts && \
