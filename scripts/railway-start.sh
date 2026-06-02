@@ -118,6 +118,17 @@ openclaw config set gateway.bind lan
 openclaw config set gateway.auth.rateLimit \
   '{"maxAttempts":10,"windowMs":60000,"lockoutMs":300000}'
 
+# ── Agent model ────────────────────────────────────────────────────────────────
+# ChatGPT Plus / Codex subscription drops support for specific Codex model
+# variants periodically (most recently: gpt-5.3-codex returned
+# `{"detail":"The 'gpt-5.3-codex' model is not supported when using Codex with
+# a ChatGPT account."}`). Make this overridable via env so swapping is a
+# variable change in Railway, not a code push. Defaults to the next tier
+# down that subscription accounts still accept.
+CODEX_MODEL="${OPENCLAW_CODEX_MODEL:-openai-codex/gpt-5.2-codex}"
+echo "[railway] Setting agents.defaults.model = $CODEX_MODEL"
+openclaw config set agents.defaults.model "\"$CODEX_MODEL\""
+
 # ── Control UI origins ─────────────────────────────────────────────────────────
 # Always include localhost. Add Railway public domain if known.
 ORIGINS='["http://localhost:'$GATEWAY_PORT'","http://127.0.0.1:'$GATEWAY_PORT'"'
