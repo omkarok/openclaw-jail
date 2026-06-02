@@ -1,18 +1,21 @@
 FROM node:22.22.0-bookworm
 
-ARG OPENCLAW_VERSION=2026.3.2
+ARG OPENCLAW_VERSION=2026.5.28
 ARG PLAYWRIGHT_VERSION=1.58.2
-# Keep in lockstep with @openclaw/acpx's ACPX_PINNED_VERSION — see Dockerfile.
-ARG ACPX_VERSION=0.1.15
+# As of openclaw 2026.4.x the ACP backend moved out of the in-tree
+# `extensions/acpx` dir and is now a separately published scoped npm package
+# `@openclaw/acpx`. Version stream tracks openclaw releases — pin in lockstep.
+ARG ACPX_VERSION=2026.5.28
 
 # Install openclaw globally (read-only FS safe — binary in /usr/local/bin)
 RUN corepack enable && npm install -g openclaw@${OPENCLAW_VERSION}
 
-# Pre-bake the ACP runtime backend (acpx) — see Dockerfile for full rationale.
-# Without this, ACP session spawns fail with EACCES on first use.
-RUN cd /usr/local/lib/node_modules/openclaw/extensions/acpx \
- && npm install --omit=dev --no-save acpx@${ACPX_VERSION} \
- && ./node_modules/.bin/acpx --version
+# Pre-bake the ACP runtime backend (`@openclaw/acpx`) globally so first ACP
+# session doesn't need to npm-install onto the read-only root or onto the
+# (slow, cold-start-blocking) volume. Installs to
+# /usr/local/lib/node_modules/@openclaw/acpx — openclaw's runtime finds it
+# there via the global node_modules lookup.
+RUN npm install -g @openclaw/acpx@${ACPX_VERSION}
 
 # Install Playwright OS-level deps
 RUN npm install -g playwright@${PLAYWRIGHT_VERSION} --ignore-scripts && \

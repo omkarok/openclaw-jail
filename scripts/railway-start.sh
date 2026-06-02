@@ -120,12 +120,13 @@ openclaw config set gateway.auth.rateLimit \
 
 # ── Agent model ────────────────────────────────────────────────────────────────
 # ChatGPT Plus / Codex subscription drops support for specific Codex model
-# variants periodically (most recently: gpt-5.3-codex returned
+# variants periodically (e.g. `gpt-5.3-codex` returned
 # `{"detail":"The 'gpt-5.3-codex' model is not supported when using Codex with
-# a ChatGPT account."}`). Make this overridable via env so swapping is a
-# variable change in Railway, not a code push. Defaults to the next tier
-# down that subscription accounts still accept.
-CODEX_MODEL="${OPENCLAW_CODEX_MODEL:-openai-codex/gpt-5.2-codex}"
+# a ChatGPT account."}`, then `gpt-5.2-codex` followed). Override via the
+# Railway env var OPENCLAW_CODEX_MODEL so swapping is a variable change, not
+# a code push. Default tracks openclaw's own latest default
+# (auth-DMRbDLpk.js: OPENAI_CODEX_DEFAULT_MODEL).
+CODEX_MODEL="${OPENCLAW_CODEX_MODEL:-openai-codex/gpt-5.5}"
 echo "[railway] Setting agents.defaults.model = $CODEX_MODEL"
 openclaw config set agents.defaults.model "\"$CODEX_MODEL\""
 
