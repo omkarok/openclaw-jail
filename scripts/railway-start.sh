@@ -150,6 +150,34 @@ openclaw config set tools.profile '"coding"'
 # for the other tool restrictions, re-allow just `message`.
 openclaw config set tools.alsoAllow '["message"]'
 
+# ── One-shot session quarantine ────────────────────────────────────────────────
+# Sessions are persisted as .jsonl files on the volume so openclaw can resume
+# multi-turn conversations across container restarts. The 2026.3.2 -> 2026.5.28
+# upgrade left some sessions in a "state=processing, activeWorkKind=embedded_run"
+# limbo that openclaw 2026.5.x's stall-recovery can't fully release — every
+# subsequent inbound user message hits a stuck reply_dispatch and never reaches
+# the agent. Symptom: inbound logged, `reply_dispatch (1 handlers)` fires,
+# then 5+ minutes of silence until stuck_session_recovery aborts, repeat.
+#
+# Move any session whose ID is listed in OPENCLAW_QUARANTINE_SESSION_IDS out
+# to /tmp so the next inbound creates a fresh session for that lane. Idempotent:
+# files that don't exist are no-ops. Once the bot is healthy you can clear the
+# env var (or leave it — it's a no-op against newly-created sessions).
+SESSIONS_DIR="$HOME/.openclaw/.openclaw/agents/main/sessions"
+if [ -d "$SESSIONS_DIR" ] && [ -n "${OPENCLAW_QUARANTINE_SESSION_IDS:-}" ]; then
+    STAMP=$(date +%F-%H%M%S)
+    IFS=',' read -ra IDS <<< "$OPENCLAW_QUARANTINE_SESSION_IDS"
+    for id in "${IDS[@]}"; do
+        id="${id// /}"
+        [ -z "$id" ] && continue
+        SRC="$SESSIONS_DIR/${id}.jsonl"
+        if [ -f "$SRC" ]; then
+            DST="/tmp/quarantined-session-${id}-${STAMP}.jsonl"
+            mv "$SRC" "$DST" && echo "[railway] Quarantined stuck session $id -> $DST"
+        fi
+    done
+fi
+
 # ── Reply delivery: automatic (old openclaw behavior) ──────────────────────────
 # openclaw 2026.5.x changed the default reply pipeline. In "message_tool" mode
 # (now the default), the agent must EXPLICITLY call tool=message to deliver
