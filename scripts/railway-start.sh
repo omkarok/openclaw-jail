@@ -146,16 +146,23 @@ openclaw config set tools.profile '"coding"'
 # ── Tools also-allow: restore `message` tool for user-triggered replies ────────
 # openclaw 2026.5.x's `coding` profile is intentionally restrictive: it strips
 # the `message` tool from runs handling untrusted input (user-typed WhatsApp
-# DMs, group messages, etc.) as a prompt-injection mitigation. The auto-reply
-# path expects the agent to call `tool=message` to send its reply; with
-# `message` removed, the agent produces output text but it never reaches the
-# user. Symptom: inbound WhatsApp → agent run completes (isError=false,
-# stopReason=stop, output_text.delta > 0) → nothing sent → user sees silence.
-# Cron-triggered runs are unaffected because they set
-# sourceReplyDeliveryMode=message_tool_only which force-adds `message`.
-# Surgical fix: keep the `coding` profile for everything else, explicitly
-# re-allow `message` via tools.alsoAllow.
+# DMs, group messages, etc.) as a prompt-injection mitigation. Keep `coding`
+# for the other tool restrictions, re-allow just `message`.
 openclaw config set tools.alsoAllow '["message"]'
+
+# ── Reply delivery: automatic (old openclaw behavior) ──────────────────────────
+# openclaw 2026.5.x changed the default reply pipeline. In "message_tool" mode
+# (now the default), the agent must EXPLICITLY call tool=message to deliver
+# its reply — text output alone is treated as private "thinking" and never
+# leaves the agent. Symptom: agent run completes with stopReason=stop and
+# output_text.delta>0, but no outbound WhatsApp send. Cron paths bypass this
+# because they set sourceReplyDeliveryMode=message_tool_only AND the
+# auto-generated cron prompt instructs the agent to call the tool. User-DM
+# paths don't.
+#
+# Switch back to "automatic" so the agent's final text-output is auto-sent as
+# the reply (matches the bot's prior contract since openclaw 2026.3.x).
+openclaw config set messages.visibleReplies '"automatic"'
 
 # ── denyCommands ───────────────────────────────────────────────────────────────
 openclaw config set gateway.nodes.denyCommands \
