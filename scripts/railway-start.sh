@@ -143,12 +143,23 @@ openclaw config set gateway.controlUi.allowedOrigins "$ORIGINS"
 # Ensure coding profile (file + exec access) is active.
 openclaw config set tools.profile '"coding"'
 
-# ── Tools also-allow: restore `message` tool for user-triggered replies ────────
-# openclaw 2026.5.x's `coding` profile is intentionally restrictive: it strips
-# the `message` tool from runs handling untrusted input (user-typed WhatsApp
-# DMs, group messages, etc.) as a prompt-injection mitigation. Keep `coding`
-# for the other tool restrictions, re-allow just `message`.
-openclaw config set tools.alsoAllow '["message"]'
+# ── Tools also-allow ───────────────────────────────────────────────────────────
+# Originally re-allowed `message` to give the agent a way to ship its reply,
+# but openclaw 2026.5.x's `message` tool validator is currently broken for
+# OpenAI-Codex tool calls: any call with empty poll-related fields (effectId,
+# effect, etc.) gets rejected with `"Poll fields require action 'poll'; use
+# action 'poll' instead of 'send'"`. The OpenAI-Codex model emits all schema
+# fields including the empty defaults, so every reply attempt hits this and
+# the agent loops trying the same broken payload. Cron-triggered runs sidestep
+# it because they can fall back to `tool=exec` to call `openclaw message send`
+# directly; user-DM runs have `exec` stripped by the `coding` profile and so
+# have no escape hatch.
+#
+# Workaround: leave `message` out of the allowlist. With `messages.visibleReplies`
+# set to `"automatic"` (below), the agent's final text output is auto-delivered
+# as the reply — which is what the bot was originally designed around. No tool
+# call needed.
+openclaw config set tools.alsoAllow '[]'
 
 # ── One-shot session quarantine ────────────────────────────────────────────────
 # Sessions are persisted as .jsonl files on the volume so openclaw can resume
