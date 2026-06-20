@@ -143,6 +143,20 @@ openclaw config set gateway.controlUi.allowedOrigins "$ORIGINS"
 # Ensure coding profile (file + exec access) is active.
 openclaw config set tools.profile '"coding"'
 
+# ── Tools also-allow: restore `message` tool for user-triggered replies ────────
+# openclaw 2026.5.x's `coding` profile is intentionally restrictive: it strips
+# the `message` tool from runs handling untrusted input (user-typed WhatsApp
+# DMs, group messages, etc.) as a prompt-injection mitigation. The auto-reply
+# path expects the agent to call `tool=message` to send its reply; with
+# `message` removed, the agent produces output text but it never reaches the
+# user. Symptom: inbound WhatsApp → agent run completes (isError=false,
+# stopReason=stop, output_text.delta > 0) → nothing sent → user sees silence.
+# Cron-triggered runs are unaffected because they set
+# sourceReplyDeliveryMode=message_tool_only which force-adds `message`.
+# Surgical fix: keep the `coding` profile for everything else, explicitly
+# re-allow `message` via tools.alsoAllow.
+openclaw config set tools.alsoAllow '["message"]'
+
 # ── denyCommands ───────────────────────────────────────────────────────────────
 openclaw config set gateway.nodes.denyCommands \
   '["canvas.eval","canvas.navigate","canvas.snapshot","camera.list","location.get","photos.latest","motion.activity","motion.pedometer","system.notify"]'
