@@ -209,6 +209,31 @@ openclaw config set gateway.nodes.denyCommands \
 
 echo "[railway] Config applied."
 
+# ── Reply-path diagnostics (why DMs answer or don't) ───────────────────────────
+# Periodic reminders/notifications are delivered by the HEARTBEAT cron path,
+# which shells out via tool=exec → `openclaw message send` and is rock solid.
+# Inbound user-DM runs use the `coding` profile, which STRIPS exec as a
+# prompt-injection guard, so a DM reply has no CLI escape hatch — it depends
+# entirely on the in-process pipeline governed by the keys below. That pipeline
+# has regressed repeatedly across 2026.5.x upgrades (message-tool validator bug,
+# message_tool default, stuck sessions). Symptom every time: cron notifications
+# keep flowing while DM replies go silent.
+#
+# Dump the exact governing keys at every boot so a "bot won't answer my texts"
+# report is diagnosable from `railway logs` alone, without live shell access.
+# Read-only: a failed `config get` is captured in the echo and never aborts boot.
+echo "[railway] --- reply-path config (inbound DM delivery depends on these) ---"
+for k in tools.profile tools.alsoAllow messages.visibleReplies \
+         channels.whatsapp.enabled channels.whatsapp.dmPolicy \
+         channels.whatsapp.allowFrom; do
+  echo "[railway]   $k = $(openclaw config get "$k" 2>&1 | tr '\n' ' ' | tr -s ' ')"
+done
+echo "[railway] Expected for working DMs: tools.alsoAllow=[] · visibleReplies=\"automatic\""
+echo "[railway]   · dmPolicy=\"allowlist\" with your sender number present in allowFrom."
+echo "[railway]   If alsoAllow still shows [\"message\"], this deploy predates the"
+echo "[railway]   visibleReplies fix (commit 6462ed1) — redeploy latest to clear it."
+echo "[railway] -----------------------------------------------------------------"
+
 # ── Node host (deferred until gateway is ready) ────────────────────────────────
 # Must start AFTER the gateway — poll until the port accepts TCP connections,
 # then launch. Backgrounded so the gateway can become the foreground process.
